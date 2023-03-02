@@ -2,7 +2,7 @@ import math
 import torch
 import torch.nn as nn
 import torch.nn.functional as F
-from .models_utils import loss_fn
+from .utils import loss_fn
 from config import cfg
 
 
