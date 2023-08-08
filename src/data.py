@@ -25,36 +25,13 @@ def fetch_dataset(data_name, model_name=None, verbose=True):
         dataset['test'] = eval(
             'datasets.{}(root=root, split=\'test\', data_mode=cfg["data_mode"], '
             'target_mode=cfg["target_mode"])'.format(data_name))
-        if model_name in ['base', 'mf', 'gmf', 'mlp', 'nmf']:
-            dataset = make_pair_transform(dataset)
-        elif model_name in ['ae']:
-            dataset = make_flat_transform(dataset)
-        else:
-            raise ValueError('Not valid model name')
+        transform = InputTransform(cfg['data_mode'])
+        dataset['train'].transform = transform
+        dataset['test'].transform = transform
     else:
         raise ValueError('Not valid dataset name')
     if verbose:
         print('data ready')
-    return dataset
-
-
-def make_pair_transform(dataset):
-    import datasets
-    if 'train' in dataset:
-        dataset['train'].transform = datasets.Compose([PairInput(cfg['data_mode'], cfg['info'])])
-    if 'test' in dataset:
-        dataset['test'].transform = datasets.Compose([PairInput(cfg['data_mode'], cfg['info'])])
-    return dataset
-
-
-def make_flat_transform(dataset):
-    import datasets
-    if 'train' in dataset:
-        dataset['train'].transform = datasets.Compose(
-            [FlatInput(cfg['data_mode'], cfg['info'], dataset['train'].num_users, dataset['train'].num_items)])
-    if 'test' in dataset:
-        dataset['test'].transform = datasets.Compose(
-            [FlatInput(cfg['data_mode'], cfg['info'], dataset['test'].num_users, dataset['test'].num_items)])
     return dataset
 
 
@@ -81,117 +58,34 @@ def make_data_loader(dataset, tag, batch_size=None, shuffle=None, sampler=None):
     return data_loader
 
 
-class PairInput(torch.nn.Module):
-    def __init__(self, data_mode, info):
+class InputTransform(torch.nn.Module):
+    def __init__(self, data_mode):
         super().__init__()
         self.data_mode = data_mode
-        self.info = info
 
     def forward(self, input):
         if self.data_mode == 'user':
             input['user'] = input['user'].repeat(input['item'].size(0))
             input['target_user'] = input['target_user'].repeat(input['target_item'].size(0))
-            if self.info == 1:
-                if 'user_profile' in input:
-                    input['user_profile'] = input['user_profile'].view(1, -1).repeat(input['item'].size(0), 1)
-                if 'target_user_profile' in input:
-                    input['target_user_profile'] = input['target_user_profile'].view(1, -1).repeat(
-                        input['target_item'].size(0), 1)
-                if 'item_attr' in input:
-                    del input['item_attr']
-                if 'target_item_attr' in input:
-                    del input['target_item_attr']
-            else:
-                if 'user_profile' in input:
-                    del input['user_profile']
-                if 'target_user_profile' in input:
-                    del input['target_user_profile']
-                if 'item_attr' in input:
-                    del input['item_attr']
-                if 'target_item_attr' in input:
-                    del input['target_item_attr']
+            if 'user_profile' in input:
+                del input['user_profile']
+            if 'target_user_profile' in input:
+                del input['target_user_profile']
+            if 'item_attr' in input:
+                del input['item_attr']
+            if 'target_item_attr' in input:
+                del input['target_item_attr']
         elif self.data_mode == 'item':
             input['item'] = input['item'].repeat(input['user'].size(0))
             input['target_item'] = input['target_item'].repeat(input['target_user'].size(0))
-            if self.info == 1:
-                if 'user_profile' in input:
-                    del input['user_profile']
-                if 'target_user_profile' in input:
-                    del input['target_user_profile']
-                if 'item_attr' in input:
-                    input['item_attr'] = input['item_attr'].view(1, -1).repeat(input['user'].size(0), 1)
-                if 'target_item_attr' in input:
-                    input['target_item_attr'] = input['target_item_attr'].view(1, -1).repeat(
-                        input['target_user'].size(0), 1)
-            else:
-                if 'user_profile' in input:
-                    del input['user_profile']
-                if 'target_user_profile' in input:
-                    del input['target_user_profile']
-                if 'item_attr' in input:
-                    del input['item_attr']
-                if 'target_item_attr' in input:
-                    del input['target_item_attr']
-        else:
-            raise ValueError('Not valid data mode')
-        return input
-
-
-class FlatInput(torch.nn.Module):
-    def __init__(self, data_mode, info, num_users, num_items):
-        super().__init__()
-        self.data_mode = data_mode
-        self.info = info
-        self.num_users = num_users
-        self.num_items = num_items
-
-    def forward(self, input):
-        if self.data_mode == 'user':
-            input['user'] = input['user'].repeat(input['item'].size(0))
-            input['target_user'] = input['target_user'].repeat(input['target_item'].size(0))
-            if self.info == 1:
-                if 'user_profile' in input:
-                    input['user_profile'] = input['user_profile'].view(1, -1)
-                    if input['item'].size(0) == 0 and input['target_item'].size(0) == 0:
-                        input['user_profile'] = input['user_profile'].repeat(input['item'].size(0), 1)
-                if 'target_user_profile' in input:
-                    del input['target_user_profile']
-                if 'item_attr' in input:
-                    del input['item_attr']
-                if 'target_item_attr' in input:
-                    del input['target_item_attr']
-            else:
-                if 'user_profile' in input:
-                    del input['user_profile']
-                if 'target_user_profile' in input:
-                    del input['target_user_profile']
-                if 'item_attr' in input:
-                    del input['item_attr']
-                if 'target_item_attr' in input:
-                    del input['target_item_attr']
-        elif self.data_mode == 'item':
-            input['item'] = input['item'].repeat(input['user'].size(0))
-            input['target_item'] = input['target_item'].repeat(input['target_user'].size(0))
-            if self.info == 1:
-                if 'user_profile' in input:
-                    del input['user_profile']
-                if 'target_user_profile' in input:
-                    del input['target_user_profile']
-                if 'item_attr' in input:
-                    input['item_attr'] = input['item_attr'].view(1, -1)
-                    if input['user'].size(0) == 0 and input['target_user'].size(0) == 0:
-                        input['item_attr'] = input['item_attr'].repeat(input['user'].size(0), 1)
-                if 'target_item_attr' in input:
-                    del input['target_item_attr']
-            else:
-                if 'user_profile' in input:
-                    del input['user_profile']
-                if 'target_user_profile' in input:
-                    del input['target_user_profile']
-                if 'item_attr' in input:
-                    del input['item_attr']
-                if 'target_item_attr' in input:
-                    del input['target_item_attr']
+            if 'user_profile' in input:
+                del input['user_profile']
+            if 'target_user_profile' in input:
+                del input['target_user_profile']
+            if 'item_attr' in input:
+                del input['item_attr']
+            if 'target_item_attr' in input:
+                del input['target_item_attr']
         else:
             raise ValueError('Not valid data mode')
         return input

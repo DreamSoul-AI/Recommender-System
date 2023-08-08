@@ -179,7 +179,7 @@ def process_control():
     cfg[model_name]['optimizer_name'] = 'Adam'
     cfg[model_name]['lr'] = 1e-3
     cfg[model_name]['momentum'] = 0.9
-    cfg[model_name]['weight_decay'] = 5e-4
+    cfg[model_name]['weight_decay'] = 0
     cfg[model_name]['nesterov'] = True
     cfg[model_name]['betas'] = (0.9, 0.999)
     cfg[model_name]['scheduler_name'] = 'CosineAnnealingLR'
