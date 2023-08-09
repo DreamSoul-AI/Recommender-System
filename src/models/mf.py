@@ -69,7 +69,7 @@ class MF(nn.Module):
         user_embedding = F.normalize(user_embedding, dim=-1)
         item_embedding = F.normalize(item_embedding, dim=-1)
 
-        mf = torch.bmm(user_embedding.unsqueeze(1), item_embedding.unsqueeze(-1)).squeeze() * 2 + 3
+        mf = torch.bmm(user_embedding.unsqueeze(1), item_embedding.unsqueeze(-1)).squeeze() * self.scaler + 3
         output['target_rating'] = mf
         output['loss'] = loss_fn(output['target_rating'], rating)
         return output

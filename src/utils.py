@@ -176,8 +176,8 @@ def process_control():
         'item': {'ML100K': 100, 'ML1M': 500, 'ML10M': 1000, 'ML20M': 1000, 'Douban': 1000, 'Amazon': 500}}
     model_name = cfg['model_name']
     cfg[model_name]['shuffle'] = {'train': True, 'test': False}
-    cfg[model_name]['optimizer_name'] = 'Adam'
-    cfg[model_name]['lr'] = 1e-3
+    cfg[model_name]['optimizer_name'] = 'SGD'
+    cfg[model_name]['lr'] = 1e-2
     cfg[model_name]['momentum'] = 0.9
     cfg[model_name]['weight_decay'] = 0
     cfg[model_name]['nesterov'] = True
