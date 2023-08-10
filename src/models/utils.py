@@ -4,6 +4,16 @@ import torch.nn.functional as F
 from config import cfg
 
 
+def normalize(x, xmin, xmax):
+    output = 2 * (x - xmin) / (xmax - xmin) - 1
+    return output
+
+
+def denormalize(x, xmin, xmax):
+    output = ((xmax - xmin) / 2) * x + (xmax + xmin) / 2
+    return output
+
+
 def loss_fn(output, target, reduction='mean'):
     if cfg['target_mode'] == 'implicit':
         loss = F.binary_cross_entropy_with_logits(output, target, reduction=reduction)

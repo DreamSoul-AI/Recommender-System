@@ -109,14 +109,6 @@ def recur(fn, input, *args):
 def process_dataset(dataset):
     cfg['data_size'] = {'train': len(dataset['train']), 'test': len(dataset['test'])}
     cfg['num_users'], cfg['num_items'] = dataset['train'].num_users, dataset['train'].num_items
-    if cfg['info'] == 1:
-        cfg['info_size'] = {}
-        if hasattr(dataset['train'], 'user_profile'):
-            cfg['info_size']['user_profile'] = dataset['train'].user_profile['data'].shape[1]
-        if hasattr(dataset['train'], 'item_attr'):
-            cfg['info_size']['item_attr'] = dataset['train'].item_attr['data'].shape[1]
-    else:
-        cfg['info_size'] = None
     return
 
 
@@ -125,7 +117,6 @@ def process_control():
     cfg['data_mode'] = cfg['control']['data_mode']
     cfg['target_mode'] = cfg['control']['target_mode']
     cfg['model_name'] = cfg['control']['model_name']
-    cfg['info'] = float(cfg['control']['info']) if 'info' in cfg['control'] else 0
     if 'data_split_mode' in cfg['control']:
         cfg['data_split_mode'] = cfg['control']['data_split_mode']
         if 'genre' in cfg['data_split_mode']:
@@ -161,8 +152,7 @@ def process_control():
         cfg['cs'] = float(cfg['control']['cs'])
     cfg['base'] = {}
     cfg['mf'] = {'hidden_size': 128}
-    cfg['mlp'] = {'hidden_size': [128, 64, 32]}
-    cfg['nmf'] = {'hidden_size': [128, 64, 32]}
+    cfg['nmf'] = {'hidden_size': [128, 64]}
     if cfg['data_name'] in ['ML100K', 'ML1M', 'ML10M', 'ML20M']:
         cfg['ae'] = {'encoder_hidden_size': [256, 128], 'decoder_hidden_size': [128, 256]}
     elif cfg['data_name'] in ['Douban']:
@@ -176,10 +166,10 @@ def process_control():
         'item': {'ML100K': 100, 'ML1M': 500, 'ML10M': 1000, 'ML20M': 1000, 'Douban': 1000, 'Amazon': 500}}
     model_name = cfg['model_name']
     cfg[model_name]['shuffle'] = {'train': True, 'test': False}
-    cfg[model_name]['optimizer_name'] = 'SGD'
-    cfg[model_name]['lr'] = 1e-2
+    cfg[model_name]['optimizer_name'] = 'AdamW'
+    cfg[model_name]['lr'] = 3e-4
     cfg[model_name]['momentum'] = 0.9
-    cfg[model_name]['weight_decay'] = 0
+    cfg[model_name]['weight_decay'] = 5e-4
     cfg[model_name]['nesterov'] = True
     cfg[model_name]['betas'] = (0.9, 0.999)
     cfg[model_name]['scheduler_name'] = 'CosineAnnealingLR'
@@ -187,6 +177,7 @@ def process_control():
     cfg[model_name]['batch_size'] = {'train': batch_size[cfg['data_mode']][cfg['data_name']],
                                      'test': batch_size[cfg['data_mode']][cfg['data_name']]}
     cfg[model_name]['num_epochs'] = 200 if model_name != 'base' else 1
+    cfg['stats'] = make_stats()[cfg['data_name']]
     torch.set_num_threads(2)
     return
 
@@ -240,6 +231,9 @@ def make_optimizer(model, tag):
                                weight_decay=cfg[tag]['weight_decay'])
     elif cfg[tag]['optimizer_name'] == 'LBFGS':
         optimizer = optim.LBFGS(model.parameters(), lr=cfg[tag]['lr'])
+    elif cfg[tag]['optimizer_name'] == 'AdamW':
+        optimizer = optim.Adam(model.parameters(), lr=cfg[tag]['lr'], betas=cfg[tag]['betas'],
+                               weight_decay=cfg[tag]['weight_decay'])
     else:
         raise ValueError('Not valid optimizer name')
     return optimizer
