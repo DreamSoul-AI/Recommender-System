@@ -67,25 +67,19 @@ class InputTransform(torch.nn.Module):
         if self.data_mode == 'user':
             input['user'] = input['user'].repeat(input['item'].size(0))
             input['target_user'] = input['target_user'].repeat(input['target_item'].size(0))
-            if 'user_profile' in input:
-                del input['user_profile']
-            if 'target_user_profile' in input:
-                del input['target_user_profile']
-            if 'item_attr' in input:
-                del input['item_attr']
-            if 'target_item_attr' in input:
-                del input['target_item_attr']
         elif self.data_mode == 'item':
             input['item'] = input['item'].repeat(input['user'].size(0))
             input['target_item'] = input['target_item'].repeat(input['target_user'].size(0))
-            if 'user_profile' in input:
-                del input['user_profile']
-            if 'target_user_profile' in input:
-                del input['target_user_profile']
-            if 'item_attr' in input:
-                del input['item_attr']
-            if 'target_item_attr' in input:
-                del input['target_item_attr']
+        input['size'] = torch.tensor([input['item'].size(0)])
+        input['target_size'] = torch.tensor([input['target_item'].size(0)])
+        if 'user_profile' in input:
+            del input['user_profile']
+        if 'target_user_profile' in input:
+            del input['target_user_profile']
+        if 'item_attr' in input:
+            del input['item_attr']
+        if 'target_item_attr' in input:
+            del input['target_item_attr']
         else:
             raise ValueError('Not valid data mode')
         return input

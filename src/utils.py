@@ -151,8 +151,8 @@ def process_control():
     if 'cs' in cfg['control']:
         cfg['cs'] = float(cfg['control']['cs'])
     cfg['base'] = {}
-    cfg['mf'] = {'hidden_size': 128}
-    cfg['nmf'] = {'hidden_size': [128, 64]}
+    cfg['mf'] = {'hidden_size': 256}
+    cfg['nmf'] = {'hidden_size': [256, 128]}
     if cfg['data_name'] in ['ML100K', 'ML1M', 'ML10M', 'ML20M']:
         cfg['ae'] = {'encoder_hidden_size': [256, 128], 'decoder_hidden_size': [128, 256]}
     elif cfg['data_name'] in ['Douban']:
