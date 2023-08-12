@@ -130,8 +130,8 @@ class AE(nn.Module):
             user_embedding_encoder = self.user_embedding_encoder(user)[torch.cumsum(size, dim=0) - 1]
             item_embedding_encoder = self.item_embedding_encoder(item)
             item_embedding_encoder_cusum_size = cusum_size(item_embedding_encoder, size)
-            item_embedding_encoder_cusum_size = item_embedding_encoder_cusum_size / size.unsqueeze(-1)
-            embedding = 0.5 * user_embedding_encoder + 0.5 * item_embedding_encoder_cusum_size
+            item_embedding_encoder_mean = item_embedding_encoder_cusum_size / size.unsqueeze(-1)
+            embedding = 0.5 * user_embedding_encoder + 0.5 * item_embedding_encoder_mean
             encoded = self.encoder(embedding)
             code = self.dropout(encoded)
             decoded = self.decoder(code)
@@ -145,8 +145,9 @@ class AE(nn.Module):
         elif cfg['data_mode'] == 'item':
             item_embedding_encoder = self.item_embedding_encoder(item)[torch.cumsum(size, dim=0) - 1]
             user_embedding_encoder = self.user_embedding_encoder(user)
-            user_embedding_encoder_cusum_size = cusum_size(user_embedding_encoder, size) / size.unsqueeze(-1)
-            embedding = 0.5 * item_embedding_encoder + 0.5 * user_embedding_encoder_cusum_size
+            user_embedding_encoder_cusum_size = cusum_size(user_embedding_encoder, size)
+            user_embedding_encoder_mean = user_embedding_encoder_cusum_size / size.unsqueeze(-1)
+            embedding = 0.5 * item_embedding_encoder + 0.5 * user_embedding_encoder_mean
             encoded = self.encoder(embedding)
             code = self.dropout(encoded)
             decoded = self.decoder(code)
