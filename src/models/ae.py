@@ -91,34 +91,19 @@ class AE(nn.Module):
 
     def user_embedding_encoder(self, user):
         embedding = self.user_weight_encoder(user)
-        if hasattr(self, 'num_matched') and self.md_mode == 'user':
-            embedding[user < self.num_matched] = self.md_weight_encoder(user[user < self.num_matched])
         return embedding
 
     def user_embedding_decoder(self, user):
         embedding = self.user_weight_decoder(user)
-        if hasattr(self, 'num_matched') and self.md_mode == 'user':
-            embedding[user < self.num_matched] = self.md_weight_decoder(user[user < self.num_matched])
         return embedding
 
     def item_embedding_encoder(self, item):
         embedding = self.item_weight_encoder(item)
-        if hasattr(self, 'num_matched') and self.md_mode == 'item':
-            embedding[item < self.num_matched] = self.md_weight_encoder(item[item < self.num_matched])
         return embedding
 
     def item_embedding_decoder(self, item):
         embedding = self.item_weight_decoder(item)
-        if hasattr(self, 'num_matched') and self.md_mode == 'item':
-            embedding[item < self.num_matched] = self.md_weight_decoder(item[item < self.num_matched])
         return embedding
-
-    def make_md(self, num_matched, md_mode, weight_encoder, weight_decoder):
-        self.num_matched = num_matched
-        self.md_mode = md_mode
-        self.md_weight_encoder = weight_encoder
-        self.md_weight_decoder = weight_decoder
-        return
 
     def forward(self, input):
         output = {}
