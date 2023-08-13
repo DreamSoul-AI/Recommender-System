@@ -107,6 +107,7 @@ def recur(fn, input, *args):
 
 
 def process_dataset(dataset):
+    cfg['stats'] = make_stats()[cfg['data_name']]
     cfg['data_size'] = {'train': len(dataset['train']), 'test': len(dataset['test'])}
     cfg['num_users'], cfg['num_items'] = dataset['train'].num_users, dataset['train'].num_items
     return
@@ -138,7 +139,6 @@ def process_control():
     cfg[model_name]['batch_size'] = {'train': batch_size[cfg['data_mode']][cfg['data_name']],
                                      'test': batch_size[cfg['data_mode']][cfg['data_name']]}
     cfg[model_name]['num_epochs'] = 200 if model_name != 'base' else 1
-    cfg['stats'] = make_stats()[cfg['data_name']]
     return
 
 
