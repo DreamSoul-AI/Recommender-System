@@ -66,7 +66,7 @@ class SimpleX(nn.Module):
             user_embedding_mean = user_embedding_cusum_size / size.unsqueeze(-1)
             embedding = 0.5 * item_embedding + 0.5 * user_embedding_mean
             embedding = torch.repeat_interleave(embedding, target_size, dim=0)
-            target_user_embedding = self.user_embedding_decoder(target_user)
+            target_user_embedding = self.user_embedding(target_user)
             embedding = F.normalize(embedding - embedding.mean(dim=-1, keepdims=True), dim=-1)
             target_user_embedding = F.normalize(target_user_embedding -
                                                 target_user_embedding.mean(dim=-1,
