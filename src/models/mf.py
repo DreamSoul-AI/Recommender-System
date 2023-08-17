@@ -56,9 +56,9 @@ class MF(nn.Module):
         return output
 
 
-def mf(num_users=None, num_items=None):
-    num_users = cfg['num_users']['data'] if num_users is None else num_users
-    num_items = cfg['num_items']['data'] if num_items is None else num_items
+def mf():
+    num_users = cfg['num_users']['data']
+    num_items = cfg['num_items']['data']
     hidden_size = cfg['mf']['hidden_size']
     model = MF(num_users, num_items, hidden_size)
     return model
