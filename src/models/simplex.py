@@ -51,7 +51,7 @@ class SimpleX(nn.Module):
         if cfg['data_mode'] == 'user':
             user_embedding = self.user_embedding(user)[torch.cumsum(size, dim=0) - 1]
             item_embedding = self.item_embedding(item)
-            item_embedding_cusum_size = cusum_size(item_embedding, size) / size.unsqueeze(-1)
+            item_embedding_cusum_size = cusum_size(item_embedding, size) / (size.unsqueeze(-1) + 1e-6)
             item_embedding_mean = item_embedding_cusum_size
             embedding = 0.5 * user_embedding + 0.5 * item_embedding_mean
             embedding = torch.repeat_interleave(embedding, target_size, dim=0)
@@ -65,7 +65,7 @@ class SimpleX(nn.Module):
             item_embedding = self.item_embedding(item)[torch.cumsum(size, dim=0) - 1]
             user_embedding = self.user_embedding(user)
             user_embedding_cusum_size = cusum_size(user_embedding, size)
-            user_embedding_mean = user_embedding_cusum_size / size.unsqueeze(-1)
+            user_embedding_mean = user_embedding_cusum_size / (size.unsqueeze(-1) + 1e-6)
             embedding = 0.5 * item_embedding + 0.5 * user_embedding_mean
             embedding = torch.repeat_interleave(embedding, target_size, dim=0)
             target_user_embedding = self.user_embedding(target_user)
@@ -76,6 +76,7 @@ class SimpleX(nn.Module):
             simplex = torch.bmm(embedding.unsqueeze(1), target_user_embedding.unsqueeze(-1)).squeeze()
         else:
             raise ValueError('Not valid data mode')
+        simplex = simplex.view(-1)
         output['loss'] = loss_fn(simplex, rating)
         output['target_rating'] = simplex
         if cfg['target_mode'] == 'explicit':
