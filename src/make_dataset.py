@@ -20,7 +20,8 @@ if __name__ == "__main__":
     stats_path = os.path.join('res', 'stats')
     cfg['seed'] = 0
     cfg['control']['target_mode'] = 'explicit'
-    data_names = ['ML100K', 'ML1M', 'ML10M', 'ML20M', 'Douban', 'Amazon']
+    # data_names = ['ML100K', 'ML1M', 'ML10M', 'ML20M', 'Douban', 'Amazon']
+    data_names = ['ML100K']
     with torch.no_grad():
         for data_name in data_names:
             cfg['control']['data_name'] = data_name
