@@ -1,6 +1,6 @@
 import argparse
 import datetime
-import models
+import model
 import os
 import shutil
 import time

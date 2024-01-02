@@ -3,7 +3,7 @@ import copy
 import os
 import torch
 import torch.backends.cudnn as cudnn
-import models
+import model
 from config import cfg, process_args
 from data import fetch_dataset, make_data_loader
 from metrics import Metric

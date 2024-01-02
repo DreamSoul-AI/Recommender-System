@@ -1,14 +1,11 @@
 import numpy as np
-import scipy
 import os
 import torch
 from torch.utils.data import Dataset
-from utils import check_exists, makedir_exist_ok, save, load
 from .utils import download_url, extract_file
 from scipy.sparse import csr_matrix
-from config import cfg
-import pdb
-from recbox.matching.preprocess import Tokenizer
+from module import check_exists, makedir_exist_ok, save, load
+
 
 class ML100K(Dataset):
     data_name = 'ML100K'
@@ -189,24 +186,24 @@ class ML100K(Dataset):
     #     test_target = csr_matrix((test_rating, (test_user, test_item)), shape=(M, N))
     #     pdb.set_trace()
     #     return (train_data, train_target), (test_data, test_target)
-        
+
     def make_implicit_data(self):
-        import pandas as pd 
+        import pandas as pd
         from sklearn.model_selection import train_test_split
         data = np.genfromtxt(os.path.join(self.raw_folder, 'ml-100k', 'u.data'), delimiter='\t')
         filtered_data = data[data[:, 2] >= 3.5]
         sorted_data = filtered_data[np.argsort(filtered_data[:, 0].astype(np.int64))]
-        groupby={}
+        groupby = {}
         for item in sorted_data:
             user = item[0].astype(np.int64)
             movie = item[1].astype(np.int64)
             groupby.setdefault(user, []).append(movie)
         user_item_lists = list(groupby.values())
         # train and test split based on user history
-        train_item_lists, test_item_lists = zip(*(train_test_split(user_item_list, test_size=0.1, random_state=42) 
-                                              for user_item_list in user_item_lists))
-        
-        #organize train and test into dataframe
+        train_item_lists, test_item_lists = zip(*(train_test_split(user_item_list, test_size=0.1, random_state=42)
+                                                  for user_item_list in user_item_lists))
+
+        # organize train and test into dataframe
         corpus_index, item_corpus = {}, []
         train_data, test_data = [], []
         for user_item_lists, data_list, label in [(train_item_lists, train_data, 1), (test_item_lists, test_data, 1)]:
@@ -221,20 +218,19 @@ class ML100K(Dataset):
                     data_list.append([user_id, corpus_index[item], label, user_id, "^".join(user_history)])
                     user_history.add(item)
 
-
         train_df = pd.DataFrame(train_data, columns=["query_index", "corpus_index", "label", "user_id", "user_history"])
         test_df = pd.DataFrame(test_data, columns=["query_index", "corpus_index", "label", "user_id", "user_history"])
-        corpus_df = pd.DataFrame(item_corpus, columns=["corpus_index", "item_id"]).set_index("corpus_index").sort_index()
-
+        corpus_df = pd.DataFrame(item_corpus, columns=["corpus_index", "item_id"]).set_index(
+            "corpus_index").sort_index()
 
         # initialize tokenizer (tokenizer is from recbox package)
         user_tokenizer = Tokenizer(na_value=train_df['user_id'].get("na_value", ""))
         user_tokenizer.fit(train_df['user_id'])
         item_tokenizer = Tokenizer(na_value=corpus_df['item_id'].get("na_value", ""))
         item_tokenizer.fit(corpus_df['item_id'])
-        
-        item_vocab = item_tokenizer.vocab  
-        user_vocab = user_tokenizer.vocab 
+
+        item_vocab = item_tokenizer.vocab
+        user_vocab = user_tokenizer.vocab
         processed_train_data, processed_test_data = [], []
         save(item_vocab, os.path.join(self.processed_folder, 'implicit', 'item_vocab.pt'), mode='pickle')
         save(user_vocab, os.path.join(self.processed_folder, 'implicit', 'user_vocab.pt'), mode='pickle')
@@ -244,7 +240,8 @@ class ML100K(Dataset):
             for index, row in df.iterrows():
                 user_id_encoded = user_vocab.get(row['user_id'], row['user_id'])
                 corpus_index_encoded = item_vocab.get(row['corpus_index'], row['corpus_index'])
-                user_history_encoded = [item_vocab.get(int(item), int(item)) for item in row['user_history'].split('^') if item]
+                user_history_encoded = [item_vocab.get(int(item), int(item)) for item in row['user_history'].split('^')
+                                        if item]
 
                 row_dict = {
                     'query_index': row['query_index'],
@@ -255,9 +252,11 @@ class ML100K(Dataset):
                 }
                 processed_data.append(row_dict)
         import json
-        with open(os.path.join(self.processed_folder, 'implicit', 'processed_train.json'), 'w', encoding='utf-8') as file:
+        with open(os.path.join(self.processed_folder, 'implicit', 'processed_train.json'), 'w',
+                  encoding='utf-8') as file:
             json.dump(processed_train_data, file, ensure_ascii=False, indent=4)
-        with open(os.path.join(self.processed_folder, 'implicit', 'processed_test.json'), 'w', encoding='utf-8') as file:
+        with open(os.path.join(self.processed_folder, 'implicit', 'processed_test.json'), 'w',
+                  encoding='utf-8') as file:
             json.dump(processed_test_data, file, ensure_ascii=False, indent=4)
         pdb.set_trace()
         return

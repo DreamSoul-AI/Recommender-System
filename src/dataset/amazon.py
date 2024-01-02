@@ -1,13 +1,11 @@
 import numpy as np
-import scipy
 import os
 import torch
 import pandas as pd
 from torch.utils.data import Dataset
-from utils import check_exists, makedir_exist_ok, save, load
-from .utils import download_url, extract_file
+from .utils import download_url
 from scipy.sparse import csr_matrix
-from config import cfg
+from module import check_exists, makedir_exist_ok, save, load
 
 
 class Amazon(Dataset):

@@ -1,38 +1,32 @@
-import copy
 import torch
 import numpy as np
-import models
+import dataset
 from config import cfg
-from scipy.sparse import csr_matrix
-from torchvision import transforms
-from torch.utils.data import DataLoader, Dataset
+from torch.utils.data import DataLoader
 from torch.utils.data.dataloader import default_collate
-from utils import collate, to_device
 
 
 def fetch_dataset(data_name, model_name=None, verbose=True):
-    import datasets
-
     model_name = cfg['model_name'] if model_name is None else model_name
-    dataset = {}
+    dataset_ = {}
     if verbose:
         print('fetching data {}...'.format(data_name))
     root = './data/{}'.format(data_name)
     if data_name in ['ML100K', 'ML1M', 'ML10M', 'ML20M', 'Douban', 'Amazon']:
-        dataset['train'] = eval(
-            'datasets.{}(root=root, split=\'train\', data_mode=cfg["data_mode"], '
+        dataset_['train'] = eval(
+            'dataset.{}(root=root, split=\'train\', data_mode=cfg["data_mode"], '
             'target_mode=cfg["target_mode"])'.format(data_name))
-        dataset['test'] = eval(
-            'datasets.{}(root=root, split=\'test\', data_mode=cfg["data_mode"], '
+        dataset_['test'] = eval(
+            'dataset.{}(root=root, split=\'test\', data_mode=cfg["data_mode"], '
             'target_mode=cfg["target_mode"])'.format(data_name))
         transform = InputTransform(cfg['data_mode'])
-        dataset['train'].transform = transform
-        dataset['test'].transform = transform
+        dataset_['train'].transform = transform
+        dataset_['test'].transform = transform
     else:
         raise ValueError('Not valid dataset name')
     if verbose:
         print('data ready')
-    return dataset
+    return dataset_
 
 
 def input_collate(batch):
@@ -40,6 +34,15 @@ def input_collate(batch):
         return {key: [b[key] for b in batch] for key in batch[0]}
     else:
         return default_collate(batch)
+
+
+def make_data_collate(collate_mode):
+    if collate_mode == 'dict':
+        return input_collate
+    elif collate_mode == 'default':
+        return default_collate
+    else:
+        raise ValueError('Not valid collate mode')
 
 
 def make_data_loader(dataset, tag, batch_size=None, shuffle=None, sampler=None):
@@ -56,6 +59,13 @@ def make_data_loader(dataset, tag, batch_size=None, shuffle=None, sampler=None):
                                         pin_memory=True, num_workers=cfg['num_workers'], collate_fn=input_collate,
                                         worker_init_fn=np.random.seed(cfg['seed']))
     return data_loader
+
+
+def process_dataset(dataset):
+    # cfg['stats'] = make_stats()[cfg['data_name']]
+    cfg['data_size'] = {'train': len(dataset['train']), 'test': len(dataset['test'])}
+    cfg['num_users'], cfg['num_items'] = dataset['train'].num_users, dataset['train'].num_items
+    return
 
 
 class InputTransform(torch.nn.Module):

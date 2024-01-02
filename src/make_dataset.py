@@ -1,12 +1,10 @@
 import argparse
 import os
-import numpy as np
 import torch
 import torch.backends.cudnn as cudnn
-import datasets
 from config import cfg, process_args
-from data import fetch_dataset, make_data_loader
-from utils import save, process_control, process_dataset, collate, makedir_exist_ok
+from dataset import fetch_dataset
+from module import save, process_control, makedir_exist_ok
 
 cudnn.benchmark = True
 parser = argparse.ArgumentParser(description='cfg')
