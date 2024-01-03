@@ -2,9 +2,8 @@
 # control
 control:
   data_name: ML100K
-  data_mode: user
-  target_mode: explicit
   model_name: ae
+  target_mode: explicit
 # experiment
 num_workers: 0
 init_seed: 0

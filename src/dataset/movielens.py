@@ -11,99 +11,26 @@ class ML100K(Dataset):
     data_name = 'ML100K'
     file = [('https://files.grouplens.org/datasets/movielens/ml-100k.zip', '0e33842e24a9c977be4e0107933c0723')]
 
-    def __init__(self, root, split, data_mode, target_mode, transform=None):
+    def __init__(self, root, split, target_mode):
         self.root = os.path.expanduser(root)
         self.split = split
-        self.data_mode = data_mode
         self.target_mode = target_mode
-        self.transform = transform
         if not check_exists(self.processed_folder):
             self.process()
-        self.data, self.target = load(os.path.join(self.processed_folder, self.target_mode, '{}.pt'.format(self.split)),
-                                      mode='pickle')
-        if self.data_mode == 'user':
-            pass
-        elif self.data_mode == 'item':
-            data_coo = self.data.tocoo()
-            target_coo = self.target.tocoo()
-            self.data = csr_matrix((data_coo.data, (data_coo.col, data_coo.row)),
-                                   shape=(self.data.shape[1], self.data.shape[0]))
-            self.target = csr_matrix((target_coo.data, (target_coo.col, target_coo.row)),
-                                     shape=(self.target.shape[1], self.target.shape[0]))
-        else:
-            raise ValueError('Not valid data mode')
-        user_profile = load(os.path.join(self.processed_folder, 'user_profile.pt'), mode='pickle')
-        self.user_profile = {'data': user_profile, 'target': user_profile}
-        item_attr = load(os.path.join(self.processed_folder, 'item_attr.pt'), mode='pickle')
-        self.item_attr = {'data': item_attr, 'target': item_attr}
+        self.data, self.target = load(os.path.join(self.processed_folder, self.target_mode, self.split))
 
     def __getitem__(self, index):
         data = self.data[index].tocoo()
         target = self.target[index].tocoo()
-        if self.data_mode == 'user':
-            input = {'user': torch.tensor(np.array([index]), dtype=torch.long),
-                     'item': torch.tensor(data.col, dtype=torch.long),
-                     'rating': torch.tensor(data.data),
-                     'target_user': torch.tensor(np.array([index]), dtype=torch.long),
-                     'target_item': torch.tensor(target.col, dtype=torch.long),
-                     'target_rating': torch.tensor(target.data)}
-            if 'data' in self.user_profile:
-                input['user_profile'] = torch.tensor(self.user_profile['data'][index])
-            if 'target' in self.user_profile:
-                input['target_user_profile'] = torch.tensor(self.user_profile['target'][index])
-            if 'data' in self.item_attr:
-                input['item_attr'] = torch.tensor(self.item_attr['data'][data.col])
-            if 'target' in self.item_attr:
-                input['target_item_attr'] = torch.tensor(self.item_attr['target'][target.col])
-        elif self.data_mode == 'item':
-            input = {'user': torch.tensor(data.col, dtype=torch.long),
-                     'item': torch.tensor(np.array([index]), dtype=torch.long),
-                     'rating': torch.tensor(data.data),
-                     'target_user': torch.tensor(target.col, dtype=torch.long),
-                     'target_item': torch.tensor(np.array([index]), dtype=torch.long),
-                     'target_rating': torch.tensor(target.data)}
-            if 'data' in self.user_profile:
-                input['user_profile'] = torch.tensor(self.user_profile['data'][data.col])
-            if 'target' in self.user_profile:
-                input['target_user_profile'] = torch.tensor(self.user_profile['target'][target.col])
-            if 'data' in self.item_attr:
-                input['item_attr'] = torch.tensor(self.item_attr['data'][index])
-            if 'target' in self.item_attr:
-                input['target_item_attr'] = torch.tensor(self.item_attr['target'][index])
-        else:
-            raise ValueError('Not valid data mode')
-        if self.transform is not None:
-            input = self.transform(input)
+        input = {'user': torch.tensor(np.array([index]), dtype=torch.long),
+                 'item': torch.tensor(data.col, dtype=torch.long),
+                 'rating': torch.tensor(data.data),
+                 'target_item': torch.tensor(target.col, dtype=torch.long),
+                 'target_rating': torch.tensor(target.data)}
         return input
 
     def __len__(self):
-        if self.data_mode == 'user':
-            len_ = self.num_users['data']
-        elif self.data_mode == 'item':
-            len_ = self.num_items['data']
-        else:
-            raise ValueError('Not valid data mode')
-        return len_
-
-    @property
-    def num_users(self):
-        if self.data_mode == 'user':
-            num_users_ = {'data': self.data.shape[0], 'target': self.target.shape[0]}
-        elif self.data_mode == 'item':
-            num_users_ = {'data': self.data.shape[1], 'target': self.target.shape[1]}
-        else:
-            raise ValueError('Not valid data mode')
-        return num_users_
-
-    @property
-    def num_items(self):
-        if self.data_mode == 'user':
-            num_items_ = {'data': self.data.shape[1], 'target': self.target.shape[1]}
-        elif self.data_mode == 'item':
-            num_items_ = {'data': self.data.shape[0], 'target': self.target.shape[0]}
-        else:
-            raise ValueError('Not valid data mode')
-        return num_items_
+        return len(self.data)
 
     @property
     def processed_folder(self):
@@ -117,14 +44,11 @@ class ML100K(Dataset):
         if not check_exists(self.raw_folder):
             self.download()
         train_set, test_set = self.make_explicit_data()
-        save(train_set, os.path.join(self.processed_folder, 'explicit', 'train.pt'), mode='pickle')
-        save(test_set, os.path.join(self.processed_folder, 'explicit', 'test.pt'), mode='pickle')
+        save(train_set, os.path.join(self.processed_folder, 'explicit', 'train.pt'))
+        save(test_set, os.path.join(self.processed_folder, 'explicit', 'test.pt'))
         train_set, test_set = self.make_implicit_data()
-        save(train_set, os.path.join(self.processed_folder, 'implicit', 'train.pt'), mode='pickle')
-        save(test_set, os.path.join(self.processed_folder, 'implicit', 'test.pt'), mode='pickle')
-        user_profile, item_attr = self.make_info()
-        save(user_profile, os.path.join(self.processed_folder, 'user_profile.pt'), mode='pickle')
-        save(item_attr, os.path.join(self.processed_folder, 'item_attr.pt'), mode='pickle')
+        save(train_set, os.path.join(self.processed_folder, 'implicit', 'train.pt'))
+        save(test_set, os.path.join(self.processed_folder, 'implicit', 'test.pt'))
         return
 
     def download(self):
