@@ -14,14 +14,9 @@ def fetch_dataset(data_name, model_name=None, verbose=True):
     root = './data/{}'.format(data_name)
     if data_name in ['ML100K', 'ML1M', 'ML10M', 'ML20M', 'Douban', 'Amazon']:
         dataset_['train'] = eval(
-            'dataset.{}(root=root, split=\'train\', data_mode=cfg["data_mode"], '
-            'target_mode=cfg["target_mode"])'.format(data_name))
+            'dataset.{}(root=root, split=\'train\', target_mode=cfg["target_mode"])'.format(data_name))
         dataset_['test'] = eval(
-            'dataset.{}(root=root, split=\'test\', data_mode=cfg["data_mode"], '
-            'target_mode=cfg["target_mode"])'.format(data_name))
-        transform = InputTransform(cfg['data_mode'])
-        dataset_['train'].transform = transform
-        dataset_['test'].transform = transform
+            'dataset.{}(root=root, split=\'test\', target_mode=cfg["target_mode"])'.format(data_name))
     else:
         raise ValueError('Not valid dataset name')
     if verbose:
