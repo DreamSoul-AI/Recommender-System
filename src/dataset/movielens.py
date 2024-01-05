@@ -18,6 +18,7 @@ class ML100K(Dataset):
         # if not check_exists(self.processed_folder):
         self.process()
         self.data = load(os.path.join(self.processed_folder, self.target_mode, self.split))
+        self.num_users, self.num_items = load(os.path.join(self.processed_folder, self.target_mode, 'meta'))
 
     def __getitem__(self, index):
         input = self.data[index]
@@ -37,12 +38,14 @@ class ML100K(Dataset):
     def process(self):
         if not check_exists(self.raw_folder):
             self.download()
-        train_set, test_set = self.make_explicit_data()
+        train_set, test_set, meta = self.make_data('explicit')
         save(train_set, os.path.join(self.processed_folder, 'explicit', 'train'))
         save(test_set, os.path.join(self.processed_folder, 'explicit', 'test'))
-        train_set, test_set = self.make_implicit_data()
+        save(meta, os.path.join(self.processed_folder, 'explicit', 'meta'))
+        train_set, test_set, meta = self.make_data('implicit')
         save(train_set, os.path.join(self.processed_folder, 'implicit', 'train'))
         save(test_set, os.path.join(self.processed_folder, 'implicit', 'test'))
+        save(meta, os.path.join(self.processed_folder, 'implicit', 'meta'))
         return
 
     def download(self):
@@ -58,8 +61,12 @@ class ML100K(Dataset):
             self.__class__.__name__, self.__len__(), self.root, self.split)
         return fmt_str
 
-    def make_explicit_data(self):
+    def make_data(self, target_mode):
         data = np.genfromtxt(os.path.join(self.raw_folder, 'ml-100k', 'u.data'), delimiter='\t')
+        if target_mode == 'implicit':
+            implicit_mask = data[:, 2] >= 3.5
+            data = data[implicit_mask]
+            data[:, 2] = 1
         user, item, rating, ts = data[:, 0].astype(np.int64), data[:, 1].astype(np.int64), data[:, 2].astype(
             np.float32), data[:, 3].astype(np.float32)
         unique_user, inv_user = np.unique(user, return_inverse=True)
@@ -87,41 +94,9 @@ class ML100K(Dataset):
                            'target_rating': test_rating_i}
             train_data.append(train_data_i)
             test_data.append(test_data_i)
-        return train_data, test_data
+        meta = M, N
+        return train_data, test_data, meta
 
-    def make_implicit_data(self):
-        data = np.genfromtxt(os.path.join(self.raw_folder, 'ml-100k', 'u.data'), delimiter='\t')
-        implicit_mask = data[:, 2] >= 3.5
-        data = data[implicit_mask]
-        data[:, 2] = 1
-        user, item, rating, ts = data[:, 0].astype(np.int64), data[:, 1].astype(np.int64), data[:, 2].astype(
-            np.float32), data[:, 3].astype(np.float32)
-        unique_user, inv_user = np.unique(user, return_inverse=True)
-        unique_item, inv_item = np.unique(item, return_inverse=True)
-
-        idx = np.random.permutation(user.shape[0])
-        num_train = int(user.shape[0] * 0.9)
-        train_idx, test_idx = idx[:num_train], idx[num_train:]
-        M, N = len(unique_user), len(unique_item)
-        train_data = []
-        test_data = []
-        for i in range(M):
-            user_i = [unique_user[i]]
-            mask_i = user == unique_user[i]
-            num_test_i = (user[test_idx] == unique_user[i]).sum()
-            ts_i = ts[mask_i]
-            sorted_idx = np.argsort(ts_i)
-            train_item_i = item[mask_i][sorted_idx][:-num_test_i].tolist()
-            test_item_i = item[mask_i][sorted_idx][-num_test_i].tolist()
-            train_rating_i = rating[mask_i][sorted_idx][:-num_test_i].tolist()
-            test_rating_i = rating[mask_i][sorted_idx][-num_test_i].tolist()
-            train_data_i = {'user': user_i, 'item': train_item_i, 'rating': train_rating_i, 'target_item': train_item_i,
-                            'target_rating': train_rating_i}
-            test_data_i = {'user': user_i, 'item': train_item_i, 'rating': train_rating_i, 'target_item': test_item_i,
-                           'target_rating': test_rating_i}
-            train_data.append(train_data_i)
-            test_data.append(test_data_i)
-        return train_data, test_data
 
 class ML1M(Dataset):
     data_name = 'ML1M'

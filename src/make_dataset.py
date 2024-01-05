@@ -17,17 +17,18 @@ process_args(args)
 if __name__ == "__main__":
     stats_path = os.path.join('res', 'stats')
     cfg['seed'] = 0
-    cfg['control']['target_mode'] = 'explicit'
+
     # data_names = ['ML100K', 'ML1M', 'ML10M', 'ML20M', 'Douban', 'Amazon']
     data_names = ['ML100K']
+    target_modes = ['explicit', 'implicit']
     with torch.no_grad():
         for data_name in data_names:
-            cfg['control']['data_name'] = data_name
-            process_control()
-            dataset = fetch_dataset(cfg['data_name'], verbose=False)
-            stats = {'m': dataset['train'].num_users, 'n': dataset['train'].num_items}
-            stats['min'] = dataset['train'].data.data.min()
-            stats['max'] = dataset['train'].data.data.max()
-            print(data_name, stats)
-            makedir_exist_ok(stats_path)
-            save(stats, os.path.join(stats_path, '{}.pt'.format(data_name)))
+            for target_mode in target_modes:
+                cfg['control']['data_name'] = data_name
+                cfg['control']['target_mode'] = target_mode
+                process_control()
+                dataset = fetch_dataset(cfg['data_name'], verbose=False)
+                stats = {'m': dataset['train'].num_users, 'n': dataset['train'].num_items}
+                print(data_name, target_mode, stats)
+                makedir_exist_ok(stats_path)
+                save(stats, os.path.join(stats_path, '{}_{}'.format(data_name, target_mode)))
