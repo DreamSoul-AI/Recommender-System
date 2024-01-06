@@ -6,7 +6,7 @@ from torch.utils.data import DataLoader
 from torch.utils.data.dataloader import default_collate
 
 
-def fetch_dataset(data_name, model_name=None, verbose=True):
+def make_dataset(data_name, model_name=None, verbose=True):
     model_name = cfg['model_name'] if model_name is None else model_name
     dataset_ = {}
     if verbose:
@@ -56,8 +56,7 @@ def make_data_loader(dataset, tag, batch_size=None, shuffle=None, sampler=None):
     return data_loader
 
 
-def process_dataset(dataset):
-    # cfg['stats'] = make_stats()[cfg['data_name']]
+def process_dataset(dataset, tokenizer):
     cfg['data_size'] = {'train': len(dataset['train']), 'test': len(dataset['test'])}
     cfg['num_users'], cfg['num_items'] = dataset['train'].num_users, dataset['train'].num_items
     return

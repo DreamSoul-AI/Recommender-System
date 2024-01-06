@@ -3,7 +3,7 @@ import os
 import torch
 import torch.backends.cudnn as cudnn
 from config import cfg, process_args
-from dataset import fetch_dataset
+from dataset import make_dataset
 from module import save, process_control, makedir_exist_ok
 
 cudnn.benchmark = True
@@ -27,7 +27,7 @@ if __name__ == "__main__":
                 cfg['control']['data_name'] = data_name
                 cfg['control']['target_mode'] = target_mode
                 process_control()
-                dataset = fetch_dataset(cfg['data_name'], verbose=False)
+                dataset = make_dataset(cfg['data_name'], verbose=False)
                 stats = {'m': dataset['train'].num_users, 'n': dataset['train'].num_items}
                 print(data_name, target_mode, stats)
                 makedir_exist_ok(stats_path)
