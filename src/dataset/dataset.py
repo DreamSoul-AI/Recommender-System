@@ -1,6 +1,8 @@
+import dataset
 import torch
 import numpy as np
-import dataset
+from datasets import Dataset
+from collections import defaultdict
 from config import cfg
 from torch.utils.data import DataLoader
 from torch.utils.data.dataloader import default_collate
@@ -57,33 +59,28 @@ def make_data_loader(dataset, tag, batch_size=None, shuffle=None, sampler=None):
 
 
 def process_dataset(dataset, tokenizer):
+    max_length = cfg['max_length']
+
+    def preprocess_function(examples):
+        model_inputs = tokenizer(examples, max_length=max_length, padding=True, truncation=True,
+                                 return_tensors='pt')
+        return model_inputs
+
+    processed_dataset = {}
+    for split in dataset:
+        data = defaultdict(list)
+        for k in dataset[split].data:
+            data[k].extend(dataset[split].data[k])
+        processed_dataset[split] = Dataset.from_dict(data)
+        processed_dataset[split] = processed_dataset[split].map(
+            preprocess_function,
+            batched=True,
+            num_proc=1,
+            load_from_cache_file=False,
+            desc="Preprocess dataset",
+            batch_size=50,
+        )
+
     cfg['data_size'] = {'train': len(dataset['train']), 'test': len(dataset['test'])}
     cfg['num_users'], cfg['num_items'] = dataset['train'].num_users, dataset['train'].num_items
     return
-
-
-class InputTransform(torch.nn.Module):
-    def __init__(self, data_mode):
-        super().__init__()
-        self.data_mode = data_mode
-
-    def forward(self, input):
-        if self.data_mode == 'user':
-            input['user'] = input['user'].repeat(input['item'].size(0))
-            input['target_user'] = input['target_user'].repeat(input['target_item'].size(0))
-        elif self.data_mode == 'item':
-            input['item'] = input['item'].repeat(input['user'].size(0))
-            input['target_item'] = input['target_item'].repeat(input['target_user'].size(0))
-        input['size'] = torch.tensor([input['item'].size(0)])
-        input['target_size'] = torch.tensor([input['target_item'].size(0)])
-        if 'user_profile' in input:
-            del input['user_profile']
-        if 'target_user_profile' in input:
-            del input['target_user_profile']
-        if 'item_attr' in input:
-            del input['item_attr']
-        if 'target_item_attr' in input:
-            del input['target_item_attr']
-        else:
-            raise ValueError('Not valid data mode')
-        return input

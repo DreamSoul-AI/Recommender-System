@@ -27,12 +27,22 @@ class Tokenizer:
         self.if_train = if_train
         return
 
-    def __call__(self, input, window_length, max_length=None, padding=False, truncation=False, return_tensors='pt'):
-        pass
+    def __call__(self, input, max_length=None, padding=False, truncation=False, return_tensors='pt'):
+        seq_len = [len(input['item'][i]) for i in range(len(input['item']))]
+        target_seq_len = [len(input['target_item'][i]) for i in range(len(input['target_item']))]
+        print(seq_len)
+        print(target_seq_len)
+        exit()
+
+        if max_length == 'longest':
+            max_length = max(seq_len)
+
         return
 
     def tokenize(self, data):
-        pass
+        print(data)
+        exit()
+
         return
 
     def convert_token_to_id(self, token):

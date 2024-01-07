@@ -21,7 +21,9 @@ class ML100K(Dataset):
         self.num_users, self.num_items = load(os.path.join(self.processed_folder, self.target_mode, 'meta'))
 
     def __getitem__(self, index):
-        input = self.data[index]
+        input = {'user': self.data['user'][index], 'item': self.data['item'][index],
+                 'rating': self.data['rating'][index], 'target_item': self.data['target_item'][index],
+                 'target_rating': self.data['target_rating'][index]}
         return input
 
     def __len__(self):
@@ -76,8 +78,8 @@ class ML100K(Dataset):
         num_train = int(user.shape[0] * 0.9)
         train_idx, test_idx = idx[:num_train], idx[num_train:]
         M, N = len(unique_user), len(unique_item)
-        train_data = []
-        test_data = []
+        train_user, train_item, train_rating, train_target_item, train_target_rating = [], [], [], [], []
+        test_user, test_item, test_rating, test_target_item, test_target_rating = [], [], [], [], []
         for i in range(M):
             user_i = [unique_user[i]]
             mask_i = user == unique_user[i]
@@ -88,12 +90,22 @@ class ML100K(Dataset):
             test_item_i = item[mask_i][sorted_idx][-num_test_i].tolist()
             train_rating_i = rating[mask_i][sorted_idx][:-num_test_i].tolist()
             test_rating_i = rating[mask_i][sorted_idx][-num_test_i].tolist()
-            train_data_i = {'user': user_i, 'item': train_item_i, 'rating': train_rating_i, 'target_item': train_item_i,
-                            'target_rating': train_rating_i}
-            test_data_i = {'user': user_i, 'item': train_item_i, 'rating': train_rating_i, 'target_item': test_item_i,
-                           'target_rating': test_rating_i}
-            train_data.append(train_data_i)
-            test_data.append(test_data_i)
+            train_user.append(user_i)
+            train_item.append(train_item_i)
+            train_rating.append(train_rating_i)
+            train_target_item.append(train_item_i)
+            train_target_rating.append(train_rating_i)
+
+            test_user.append(user_i)
+            test_item.append(train_item_i)
+            test_rating.append(train_rating_i)
+            test_target_item.append(test_item_i)
+            test_target_rating.append(test_rating_i)
+
+        train_data = {'user': train_user, 'item': train_item, 'rating': train_rating, 'target_item': train_target_item,
+                      'target_rating': train_target_rating}
+        test_data = {'user': test_user, 'item': test_item, 'rating': test_rating, 'target_item': test_target_item,
+                     'target_rating': test_target_rating}
         meta = M, N
         return train_data, test_data, meta
 

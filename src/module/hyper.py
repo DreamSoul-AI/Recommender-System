@@ -6,6 +6,7 @@ def process_control():
     cfg['data_name'] = cfg['control']['data_name']
     cfg['target_mode'] = cfg['control']['target_mode']
     cfg['model_name'] = cfg['control']['model_name']
+    cfg['max_length'] = 128
     cfg['base'] = {}
     cfg['mf'] = {'hidden_size': 256}
     cfg['nmf'] = {'hidden_size': [256, 128]}
