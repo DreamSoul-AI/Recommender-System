@@ -15,8 +15,8 @@ class ML100K(Dataset):
         self.root = os.path.expanduser(root)
         self.split = split
         self.target_mode = target_mode
-        # if not check_exists(self.processed_folder):
-        self.process()
+        if not check_exists(os.path.join(self.processed_folder, self.target_mode)):
+            self.process()
         self.data = load(os.path.join(self.processed_folder, self.target_mode, self.split))
         self.num_users, self.num_items = load(os.path.join(self.processed_folder, self.target_mode, 'meta'))
 
@@ -40,14 +40,10 @@ class ML100K(Dataset):
     def process(self):
         if not check_exists(self.raw_folder):
             self.download()
-        train_set, test_set, meta = self.make_data('explicit')
-        save(train_set, os.path.join(self.processed_folder, 'explicit', 'train'))
-        save(test_set, os.path.join(self.processed_folder, 'explicit', 'test'))
-        save(meta, os.path.join(self.processed_folder, 'explicit', 'meta'))
-        train_set, test_set, meta = self.make_data('implicit')
-        save(train_set, os.path.join(self.processed_folder, 'implicit', 'train'))
-        save(test_set, os.path.join(self.processed_folder, 'implicit', 'test'))
-        save(meta, os.path.join(self.processed_folder, 'implicit', 'meta'))
+        train_set, test_set, meta = self.make_data(self.target_mode)
+        save(train_set, os.path.join(self.processed_folder, self.target_mode, 'train'))
+        save(test_set, os.path.join(self.processed_folder, self.target_mode, 'test'))
+        save(meta, os.path.join(self.processed_folder, self.target_mode, 'meta'))
         return
 
     def download(self):
@@ -87,9 +83,10 @@ class ML100K(Dataset):
             ts_i = ts[mask_i]
             sorted_idx = np.argsort(ts_i)
             train_item_i = item[mask_i][sorted_idx][:-num_test_i].tolist()
-            test_item_i = item[mask_i][sorted_idx][-num_test_i].tolist()
+            test_item_i = item[mask_i][sorted_idx][-num_test_i:].tolist()
             train_rating_i = rating[mask_i][sorted_idx][:-num_test_i].tolist()
-            test_rating_i = rating[mask_i][sorted_idx][-num_test_i].tolist()
+            test_rating_i = rating[mask_i][sorted_idx][-num_test_i:].tolist()
+
             train_user.append(user_i)
             train_item.append(train_item_i)
             train_rating.append(train_rating_i)

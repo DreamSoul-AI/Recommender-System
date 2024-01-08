@@ -6,6 +6,7 @@ from collections import defaultdict
 from config import cfg
 from torch.utils.data import DataLoader
 from torch.utils.data.dataloader import default_collate
+from functools import partial
 
 
 def make_dataset(data_name, model_name=None, verbose=True):
@@ -26,11 +27,18 @@ def make_dataset(data_name, model_name=None, verbose=True):
     return dataset_
 
 
-def input_collate(batch):
-    if isinstance(batch[0], dict):
-        return {key: [b[key] for b in batch] for key in batch[0]}
-    else:
-        return default_collate(batch)
+def input_collate(input):
+    first = input[0]
+    batch = {}
+    for k, v in first.items():
+        if v is not None and not isinstance(v, str):
+            if isinstance(v, torch.Tensor):
+                batch[k] = torch.stack([f[k] for f in input])
+            elif isinstance(v, np.ndarray):
+                batch[k] = torch.tensor(np.stack([f[k] for f in input]))
+            else:
+                batch[k] = torch.tensor([f[k] for f in input])
+    return batch
 
 
 def make_data_collate(collate_mode):
@@ -59,10 +67,13 @@ def make_data_loader(dataset, tag, batch_size=None, shuffle=None, sampler=None):
 
 
 def process_dataset(dataset, tokenizer):
-    max_length = cfg['max_length']
+    cfg['max_length'] = {'train': {'item': max([len(x) for x in dataset['train'].data['item']]),
+                                   'target_item': max([len(x) for x in dataset['train'].data['target_item']])},
+                         'test': {'item': max([len(x) for x in dataset['test'].data['item']]),
+                                  'target_item': max([len(x) for x in dataset['test'].data['target_item']])}}
 
-    def preprocess_function(examples):
-        model_inputs = tokenizer(examples, max_length=max_length, padding=True, truncation=True,
+    def preprocess_function(max_length, examples):
+        model_inputs = tokenizer(examples, max_length=max_length, padding=True, truncation=False,
                                  return_tensors='pt')
         return model_inputs
 
@@ -72,8 +83,9 @@ def process_dataset(dataset, tokenizer):
         for k in dataset[split].data:
             data[k].extend(dataset[split].data[k])
         processed_dataset[split] = Dataset.from_dict(data)
+        preprocess_function_ = partial(preprocess_function, cfg['max_length'][split])
         processed_dataset[split] = processed_dataset[split].map(
-            preprocess_function,
+            preprocess_function_,
             batched=True,
             num_proc=1,
             load_from_cache_file=False,
