@@ -50,21 +50,26 @@ def make_data_collate(collate_mode):
         raise ValueError('Not valid collate mode')
 
 
-def make_data_loader(dataset, tag, batch_size=None, shuffle=None, sampler=None):
+def make_data_loader(dataset, batch_size):
     data_loader = {}
     for k in dataset:
-        _batch_size = cfg[tag]['batch_size'][k] if batch_size is None else batch_size[k]
-        _shuffle = cfg[tag]['shuffle'][k] if shuffle is None else shuffle[k]
-        if sampler is None:
-            data_loader[k] = DataLoader(dataset=dataset[k], batch_size=_batch_size, shuffle=_shuffle,
-                                        pin_memory=True, num_workers=cfg['num_workers'], collate_fn=input_collate,
+        if k == 'train':
+            cfg['num_samples'] = batch_size[k] * (cfg['num_steps'] - cfg['iteration']) * cfg['step_period']
+        if k == 'train' and cfg['num_samples'] > 0:
+            generator = torch.Generator()
+            generator.manual_seed(cfg['seed'])
+            sampler = torch.utils.data.RandomSampler(dataset[k], replacement=False, num_samples=cfg['num_samples'],
+                                                     generator=generator)
+            data_loader[k] = DataLoader(dataset=dataset[k], batch_size=batch_size[k], sampler=sampler,
+                                        pin_memory=cfg['pin_memory'], num_workers=cfg['num_workers'],
+                                        collate_fn=make_data_collate(cfg['collate_mode']),
                                         worker_init_fn=np.random.seed(cfg['seed']))
         else:
-            data_loader[k] = DataLoader(dataset=dataset[k], batch_size=_batch_size, sampler=sampler[k],
-                                        pin_memory=True, num_workers=cfg['num_workers'], collate_fn=input_collate,
+            data_loader[k] = DataLoader(dataset=dataset[k], batch_size=batch_size[k], shuffle=False,
+                                        pin_memory=cfg['pin_memory'], num_workers=cfg['num_workers'],
+                                        collate_fn=make_data_collate(cfg['collate_mode']),
                                         worker_init_fn=np.random.seed(cfg['seed']))
     return data_loader
-
 
 def process_dataset(dataset, tokenizer):
     cfg['max_length'] = {'train': {'item': max([len(x) for x in dataset['train'].data['item']]),
@@ -95,4 +100,7 @@ def process_dataset(dataset, tokenizer):
 
     cfg['data_size'] = {'train': len(dataset['train']), 'test': len(dataset['test'])}
     cfg['num_users'], cfg['num_items'] = dataset['train'].num_users, dataset['train'].num_items
+    if 'num_epochs' in cfg:
+        cfg['num_steps'] = int(np.ceil(len(processed_dataset['train']) / cfg['batch_size'])) * cfg['num_epochs']
+        cfg['eval_period'] = int(np.ceil(len(processed_dataset['train']) / cfg['batch_size']))
     return
