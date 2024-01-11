@@ -39,9 +39,9 @@ def runExperiment():
     tag_path = os.path.join(path, cfg['tag'])
     checkpoint_path = os.path.join(tag_path, 'checkpoint')
     best_path = os.path.join(tag_path, 'best')
-    tokenizer_path = os.path.join('output', 'tokenizer')
+    tokenizer_path = os.path.join(path, 'tokenizer')
     dataset = make_dataset(cfg['data_name'])
-    tokenizer = resume(os.path.join(tokenizer_path, cfg['data_name']))
+    tokenizer = resume(os.path.join(tokenizer_path))[cfg['data_name']]
     dataset = process_dataset(dataset, tokenizer)
     model = make_model(cfg['model_name'], tokenizer)
     result = resume(checkpoint_path, resume_mode=cfg['resume_mode'])

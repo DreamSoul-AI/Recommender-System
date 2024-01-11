@@ -27,7 +27,7 @@ class ML100K(Dataset):
         return input
 
     def __len__(self):
-        return len(self.data)
+        return len(self.data['user'])
 
     @property
     def processed_folder(self):

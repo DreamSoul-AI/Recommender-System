@@ -71,6 +71,7 @@ def make_data_loader(dataset, batch_size):
                                         worker_init_fn=np.random.seed(cfg['seed']))
     return data_loader
 
+
 def process_dataset(dataset, tokenizer):
     cfg['max_length'] = {'train': {'item': max([len(x) for x in dataset['train'].data['item']]),
                                    'target_item': max([len(x) for x in dataset['train'].data['target_item']])},
@@ -103,4 +104,4 @@ def process_dataset(dataset, tokenizer):
     if 'num_epochs' in cfg:
         cfg['num_steps'] = int(np.ceil(len(processed_dataset['train']) / cfg['batch_size'])) * cfg['num_epochs']
         cfg['eval_period'] = int(np.ceil(len(processed_dataset['train']) / cfg['batch_size']))
-    return
+    return processed_dataset

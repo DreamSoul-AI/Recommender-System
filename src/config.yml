@@ -2,14 +2,14 @@
 # control
 control:
   data_name: ML100K
-  model_name: ae
+  model_name: base
   target_mode: explicit
 # experiment
+pin_memory: True
 num_workers: 0
 init_seed: 0
 num_experiments: 1
 log_interval: 0.25
 device: cuda
-world_size: 1
 resume_mode: 0
-verbose: False
+profile: False

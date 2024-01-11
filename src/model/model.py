@@ -2,13 +2,16 @@ import torch
 import torch.nn as nn
 import torch.nn.functional as F
 import torch.optim as optim
-from model import base, Tokenizer
+import model
+from .rs import rs
+from .tokenizer import Tokenizer
 from transformers import get_linear_schedule_with_warmup
 from config import cfg
 
 
 def make_model(model_name, tokenizer):
-    model_ = base(model_name, tokenizer)
+    model_ = eval('model.{}(tokenizer)'.format(model_name))
+    model_ = rs(model_, tokenizer)
     return model_
 
 

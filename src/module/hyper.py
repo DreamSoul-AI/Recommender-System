@@ -14,11 +14,13 @@ def process_control():
     cfg['simplex'] = {'hidden_size': 256}
     batch_size = {'ML100K': 100, 'ML1M': 500, 'ML10M': 1000, 'ML20M': 1000, 'Douban': 100, 'Amazon': 500}
 
-    cfg['batch_size'] = batch_size
+    cfg['batch_size'] = batch_size[cfg['data_name']]
     cfg['step_period'] = 1
     cfg['num_steps'] = 400
     cfg['eval_period'] = 200
-    # cfg['num_epochs'] = 2
+    # cfg['num_epochs'] = 1
+    if cfg['model_name'] == 'base':
+        cfg['num_epochs'] = 1
 
     model_name = cfg['model_name']
     cfg[model_name]['shuffle'] = {'train': True, 'test': False}
@@ -29,4 +31,5 @@ def process_control():
     cfg[model_name]['nesterov'] = True
     cfg[model_name]['betas'] = (0.9, 0.999)
     cfg[model_name]['scheduler_name'] = 'CosineAnnealingLR'
+    cfg[model_name]['batch_size'] = {'train': cfg['batch_size'], 'test': cfg['batch_size']}
     return

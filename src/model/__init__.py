@@ -5,3 +5,4 @@ from .ae import *
 from .simplex import *
 from .model import *
 from .tokenizer import *
+from .rs import *
