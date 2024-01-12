@@ -68,12 +68,13 @@ class Tokenizer:
                     target_seq_len[i] = len(target_item_i)
             if padding and max_length is not None and max_length['item'] > seq_len[i]:
                 pad_width = max_length['item'] - seq_len[i]
+                pad_value = self.convert_token_to_id(self.pad_token, self.item_vocab)
                 if self.padding_direction == 'right':
-                    item_i = np.pad(item_i, (0, pad_width), mode='constant', constant_values=0).tolist()
+                    item_i = np.pad(item_i, (0, pad_width), mode='constant', constant_values=pad_value).tolist()
                     rating_i = np.pad(rating_i, (0, pad_width), mode='constant', constant_values=0).tolist()
                     attention_mask_i = [1] * seq_len[i] + [0] * pad_width
                 elif self.padding_direction == 'left':
-                    item_i = np.pad(item_i, (pad_width, 0), mode='constant', constant_values=0).tolist()
+                    item_i = np.pad(item_i, (pad_width, 0), mode='constant', constant_values=pad_value).tolist()
                     rating_i = np.pad(rating_i, (pad_width, 0), mode='constant', constant_values=0).tolist()
                     attention_mask_i = [0] * pad_width + [1] * seq_len[i]
                 else:
@@ -82,15 +83,16 @@ class Tokenizer:
                 attention_mask_i = [1] * seq_len[i]
             if padding and max_length is not None and max_length['target_item'] > target_seq_len[i]:
                 target_pad_width = max_length['target_item'] - target_seq_len[i]
+                target_pad_value = self.convert_token_to_id(self.pad_token, self.item_vocab)
                 if self.padding_direction == 'right':
                     target_item_i = np.pad(target_item_i, (0, target_pad_width), mode='constant',
-                                           constant_values=0).tolist()
+                                           constant_values=target_pad_value).tolist()
                     target_rating_i = np.pad(target_rating_i, (0, target_pad_width), mode='constant',
                                              constant_values=0).tolist()
                     target_attention_mask_i = [1] * target_seq_len[i] + [0] * target_pad_width
                 elif self.padding_direction == 'left':
                     target_item_i = np.pad(target_item_i, (target_pad_width, 0), mode='constant',
-                                           constant_values=0).tolist()
+                                           constant_values=target_pad_value).tolist()
                     target_rating_i = np.pad(target_rating_i, (target_pad_width, 0), mode='constant',
                                              constant_values=0).tolist()
                     target_attention_mask_i = [0] * target_pad_width + [1] * target_seq_len[i]

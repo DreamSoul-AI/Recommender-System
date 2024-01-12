@@ -84,16 +84,17 @@ def train(data_loader, model, optimizer, scheduler, logger):
         for i, input in data_loader:
             if i % cfg['step_period'] == 0 and cfg['profile']:
                 logger.profiler.step()
-            input_size = input['data'].size(0)
+            input_size = input['user'].size(0)
             input = to_device(input, cfg['device'])
             output = model(input)
             loss = 1 / cfg['step_period'] * output['loss']
-            loss.backward()
-            if (i + 1) % cfg['step_period'] == 0:
-                torch.nn.utils.clip_grad_norm_(model.parameters(), 1)
-                optimizer.step()
-                scheduler.step()
-                optimizer.zero_grad()
+            if cfg['model_name'] != 'base':
+                loss.backward()
+                if (i + 1) % cfg['step_period'] == 0:
+                    torch.nn.utils.clip_grad_norm_(model.parameters(), 1)
+                    optimizer.step()
+                    scheduler.step()
+                    optimizer.zero_grad()
             evaluation = logger.evaluate('train', 'batch', input, output)
             logger.append(evaluation, 'train', n=input_size)
             idx = cfg['iteration'] % cfg['eval_period']
@@ -123,7 +124,7 @@ def test(data_loader, model, logger):
     with torch.no_grad():
         model.train(False)
         for i, input in enumerate(data_loader):
-            input_size = input['data'].size(0)
+            input_size = input['user'].size(0)
             input = to_device(input, cfg['device'])
             output = model(input)
             evaluation = logger.evaluate('test', 'batch', input, output)

@@ -11,7 +11,7 @@ from config import cfg
 
 def make_model(model_name, tokenizer):
     model_ = eval('model.{}(tokenizer)'.format(model_name))
-    model_ = rs(model_, tokenizer)
+    model_ = rs(model_)
     return model_
 
 
@@ -20,32 +20,14 @@ def make_tokenizer():
     return tokenizer
 
 
-def make_loss(output, input):
-    if 'target' in input:
-        loss = loss_fn(output['target'], input['target'])
+def make_loss(output, target):
+    if cfg['target_mode'] == 'explicit':
+        loss = F.mse_loss(output, target)
+    elif cfg['target_mode'] == 'implicit':
+        loss = F.binary_cross_entropy_with_logits(output, target)
     else:
-        return
+        raise ValueError('Not valid target mode')
     return loss
-
-
-def loss_fn(output, target, reduction='mean'):
-    if target.dtype == torch.int64:
-        loss = F.cross_entropy(output, target, reduction=reduction)
-    else:
-        loss = kld_loss(output, target, reduction=reduction)
-    return loss
-
-
-def cross_entropy_loss(output, target, reduction='mean'):
-    if target.dtype != torch.int64:
-        target = (target.topk(1, 1, True, True)[1]).view(-1)
-    ce = F.cross_entropy(output, target, reduction=reduction)
-    return ce
-
-
-def kld_loss(output, target, reduction='batchmean'):
-    kld = F.kl_div(F.log_softmax(output, dim=-1), target, reduction=reduction)
-    return kld
 
 
 def init_param(m):

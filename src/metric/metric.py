@@ -139,15 +139,17 @@ class Metric:
         for split in metric_name:
             for m in metric_name[split]:
                 if m == 'Loss':
-                    metric[split][m] = {'mode': 'batch', 'metric': (lambda input, output: output['loss'].item())}
+                    metric[split][m] = {'mode': 'batch', 'metric': (lambda input, output: output['target_loss'].item())}
                 elif m == 'Accuracy':
                     metric[split][m] = {'mode': 'batch',
                                         'metric': (
-                                            lambda input, output: recur(Accuracy, output['target'], input['target']))}
+                                            lambda input, output: recur(Accuracy, output['target_rating'],
+                                                                        input['target_rating']))}
                 elif m == 'MSE':
                     metric[split][m] = {'mode': 'batch',
                                         'metric': (
-                                            lambda input, output: recur(MSE, output['target'], input['target']))}
+                                            lambda input, output: recur(MSE, output['target_rating'],
+                                                                        input['target_rating']))}
                 else:
                     raise ValueError('Not valid metric name')
         return metric
@@ -184,4 +186,3 @@ class Metric:
 
     def state_dict(self):
         return {'best': self.best, 'best_metric_name': self.best_metric_name, 'best_direction': self.best_direction}
-
