@@ -17,28 +17,28 @@ process_args(args)
 
 
 def main():
-    process_control()
     seeds = list(range(cfg['init_seed'], cfg['init_seed'] + cfg['num_experiments']))
     for i in range(cfg['num_experiments']):
-        model_tag_list = [str(seeds[i]), cfg['control_name']]
-        cfg['model_tag'] = '_'.join([x for x in model_tag_list if x])
-        print('Experiment: {}'.format(cfg['model_tag']))
+        tag_list = [str(seeds[i]), cfg['control_name']]
+        cfg['tag'] = '_'.join([x for x in tag_list if x])
+        process_control()
+        print('Experiment: {}'.format(cfg['tag']))
         runExperiment()
     return
 
 
 def runExperiment():
-    cfg['seed'] = int(cfg['model_tag'].split('_')[0])
+    cfg['seed'] = int(cfg['tag'].split('_')[0])
     torch.manual_seed(cfg['seed'])
     torch.cuda.manual_seed(cfg['seed'])
-    path = os.path.join('output', 'exp')
-    tokenizer_path = os.path.join(path, 'tokenizer')
+    cfg['path'] = os.path.join('output', 'exp')
+    cfg['tokenizer_path'] = os.path.join(cfg['path'], 'tokenizer')
     tokenizer = make_tokenizer()
     dataset = make_dataset(cfg['data_name'])
     tokenizer.train(True)
     dataset = process_dataset(dataset, tokenizer)
     tokenizer.train(False)
-    save(tokenizer, os.path.join(tokenizer_path, cfg['data_name']))
+    save(tokenizer, os.path.join(cfg['tokenizer_path'], cfg['data_name']))
     return
 
 

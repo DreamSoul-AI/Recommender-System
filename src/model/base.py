@@ -6,11 +6,8 @@ from config import cfg
 
 
 class Base(nn.Module):
-    def __init__(self, tokenizer):
+    def __init__(self, user_vocab_size, item_vocab_size):
         super().__init__()
-        self.pad_value = tokenizer.convert_token_to_id(tokenizer.pad_token, tokenizer.item_vocab)
-        user_vocab_size = len(tokenizer.user_vocab)
-        item_vocab_size = len(tokenizer.item_vocab)
         self.register_buffer('base', torch.zeros(item_vocab_size))
         self.register_buffer('count', torch.zeros(item_vocab_size))
         self.eps = 1e-8
@@ -38,6 +35,8 @@ class Base(nn.Module):
         return output_rating, output_target_rating
 
 
-def base(tokenizer):
-    model = Base(tokenizer)
+def base(cfg):
+    user_vocab_size = cfg['user_vocab_size']
+    item_vocab_size = cfg['item_vocab_size']
+    model = Base(user_vocab_size, item_vocab_size)
     return model
