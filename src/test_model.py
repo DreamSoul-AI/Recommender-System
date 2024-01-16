@@ -44,7 +44,7 @@ def runExperiment():
     dataset = process_dataset(dataset, tokenizer)
     model = make_model(cfg['model'], tokenizer)
     result = resume(cfg['best_path'])
-    cfg['iteration'] = result['cfg']['iteration']
+    cfg['step'] = result['cfg']['step']
     model = model.to(cfg['device'])
     model.load_state_dict(result['model'])
     data_loader = make_data_loader(dataset, cfg[cfg['tag']]['optimizer']['batch_size'])
@@ -69,7 +69,7 @@ def test(data_loader, model, logger):
         evaluation = logger.evaluate('test', 'full')
         logger.append(evaluation, 'test', input_size)
         info = {'info': ['Model: {}'.format(cfg['tag']),
-                         'Test Epoch: {}({:.0f}%)'.format(cfg['iteration'] // cfg['eval_period'], 100.)]}
+                         'Test Epoch: {}({:.0f}%)'.format(cfg['step'] // cfg['eval_period'], 100.)]}
         logger.append(info, 'test')
         print(logger.write('test'))
         logger.save(True)

@@ -9,7 +9,8 @@ if __name__ == "__main__":
     dim = 1
     # data_names = ['ML100K', 'ML1M', 'ML10M', 'ML20M', 'Douban', 'Amazon']
     data_names = ['ML100K']
-    target_modes = ['explicit', 'implicit']
+    # target_modes = ['explicit', 'implicit']
+    target_modes = ['explicit']
     cfg['seed'] = 0
     cfg['tag'] = 'make_dataset'
     process_control()
@@ -17,6 +18,9 @@ if __name__ == "__main__":
         for target_mode in target_modes:
             dataset = make_dataset(data_name)
             stats = {'m': dataset['train'].num_users, 'n': dataset['train'].num_items}
+            rating = dataset['train'].data['rating']
+            stats['min'] = min(min(rating_i) for rating_i in rating if len(rating_i) > 0)
+            stats['max'] = max(max(rating_i) for rating_i in rating if len(rating_i) > 0)
             print(data_name, target_mode, stats)
             makedir_exist_ok(stats_path)
             save(stats, os.path.join(stats_path, '{}_{}'.format(data_name, target_mode)))

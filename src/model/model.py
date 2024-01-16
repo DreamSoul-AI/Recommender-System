@@ -11,7 +11,7 @@ from config import cfg
 
 def make_model(cfg, tokenizer):
     base = eval('model.{}(cfg)'.format(cfg['model_name']))
-    model = rs(tokenizer, base)
+    model = rs(tokenizer, base, cfg)
     return model
 
 
@@ -92,3 +92,13 @@ def make_scheduler(optimizer, cfg):
     else:
         raise ValueError('Not valid scheduler name')
     return scheduler
+
+
+def normalize(x, xmin, xmax):
+    output = 2 * (x - xmin) / (xmax - xmin) - 1
+    return output
+
+
+def denormalize(x, xmin, xmax):
+    output = ((xmax - xmin) / 2) * x + (xmax + xmin) / 2
+    return output

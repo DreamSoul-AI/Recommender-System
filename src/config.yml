@@ -2,7 +2,7 @@
 # control
 control:
   data_name: ML100K
-  model_name: mf
+  model_name: base
   target_mode: explicit
 # experiment
 pin_memory: True
