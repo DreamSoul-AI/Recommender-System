@@ -111,6 +111,7 @@ def process_dataset(dataset, tokenizer):
     if 'num_epochs' in cfg:
         cfg['num_steps'] = int(np.ceil(len(processed_dataset['train']) / cfg['batch_size'])) * cfg['num_epochs']
         cfg['eval_period'] = int(np.ceil(len(processed_dataset['train']) / cfg['batch_size']))
+        cfg[cfg['tag']]['optimizer']['num_steps'] = cfg['num_steps']
 
     cfg['model']['user_vocab_size'] = len(tokenizer.user_vocab)
     cfg['model']['item_vocab_size'] = len(tokenizer.item_vocab)

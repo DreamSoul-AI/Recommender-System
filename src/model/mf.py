@@ -44,6 +44,11 @@ class MF(nn.Module):
         user_embedding = F.normalize(user_embedding - user_embedding.mean(dim=-1, keepdims=True), dim=-1)
         item_embedding = F.normalize(item_embedding - item_embedding.mean(dim=-1, keepdims=True), dim=-1)
 
+        target_user_embedding = F.normalize(target_user_embedding -
+                                            target_user_embedding.mean(dim=-1, keepdims=True), dim=-1)
+        target_item_embedding = F.normalize(target_item_embedding -
+                                            target_item_embedding.mean(dim=-1, keepdims=True), dim=-1)
+
         mf = torch.bmm(user_embedding.unsqueeze(-2), item_embedding.unsqueeze(-1))
         target_mf = torch.bmm(target_user_embedding.unsqueeze(-2),
                               target_item_embedding.unsqueeze(-1))

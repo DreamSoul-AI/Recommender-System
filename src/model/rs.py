@@ -27,6 +27,8 @@ class RecommenderSystem(nn.Module):
         if self.target_mode == 'explicit':
             output['rating'] = model.denormalize(output['rating'], self.stats['min'], self.stats['max'])
             output['target_rating'] = model.denormalize(output['target_rating'], self.stats['min'], self.stats['max'])
+        # print(input['rating'].max(), input['rating'].min())
+        # print(output['rating'].max(), input['rating'].min())
         input['rating'] = input['rating'][attention_mask]
         input['target_rating'] = input['target_rating'][target_attention_mask]
         return output
