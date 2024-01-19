@@ -9,8 +9,7 @@ from torch.utils.data.dataloader import default_collate
 from functools import partial
 
 
-def make_dataset(data_name, model_name=None, verbose=True):
-    model_name = cfg['model_name'] if model_name is None else model_name
+def make_dataset(data_name, verbose=True):
     dataset_ = {}
     if verbose:
         print('fetching data {}...'.format(data_name))
@@ -105,6 +104,8 @@ def process_dataset(dataset, tokenizer):
             desc="Preprocess dataset",
             batch_size=50,
         )
+        if cfg['target_mode'] == 'implicit':
+            processed_dataset[split].set_transform(NagativeSampling(tokenizer))
 
     cfg['data_size'] = {'train': len(dataset['train']), 'test': len(dataset['test'])}
     cfg['num_users'], cfg['num_items'] = dataset['train'].num_users, dataset['train'].num_items
@@ -116,3 +117,17 @@ def process_dataset(dataset, tokenizer):
     cfg['model']['user_vocab_size'] = len(tokenizer.user_vocab)
     cfg['model']['item_vocab_size'] = len(tokenizer.item_vocab)
     return processed_dataset
+
+
+class NagativeSampling(torch.nn.Module):
+    def __init__(self, tokenizer):
+        super().__init__()
+        item_id = set(tokenizer.inv_item_vocab.keys())
+        special_id = set([tokenizer.convert_token_to_id(x, tokenizer.item_vocab) for x in tokenizer.special_token])
+        self.data_id = item_id - special_id
+        self.pad_id = tokenizer.convert_token_to_id(tokenizer.pad_token, tokenizer.item_vocab)
+
+    def forward(self, input):
+        input['item'] = torch.tensor()
+
+        return input

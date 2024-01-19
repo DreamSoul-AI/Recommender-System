@@ -16,11 +16,16 @@ def make_metric(split, **kwargs):
             for k in metric_name:
                 metric_name[k].extend(['Loss', 'MSE'])
         elif target_mode == 'implicit':
-            best = -float('inf')
-            best_direction = 'up'
-            best_metric_name = 'NDCG'
+            # best = -float('inf')
+            # best_direction = 'up'
+            # best_metric_name = 'NDCG'
+            # for k in metric_name:
+            #     metric_name[k].extend(['Loss', 'NDCG'])
+            best = float('inf')
+            best_direction = 'down'
+            best_metric_name = 'Loss'
             for k in metric_name:
-                metric_name[k].extend(['Loss', 'NDCG'])
+                metric_name[k].extend(['Loss'])
         else:
             raise ValueError('Not valid target mode')
     else:

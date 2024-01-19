@@ -12,9 +12,9 @@ def process_control():
     cfg['step_period'] = 1
     cfg['num_steps'] = 80000
     cfg['eval_period'] = 200
-    cfg['num_epochs'] = 2
+    cfg['num_epochs'] = 200
     if cfg['model_name'] == 'base':
-        cfg['num_epochs'] = 200
+        cfg['num_epochs'] = 1
     cfg['collate_mode'] = 'dict'
 
     cfg['model'] = {}
@@ -25,7 +25,7 @@ def process_control():
     cfg['model']['nmf'] = {'hidden_size': [256, 128]}
     cfg['model']['ae'] = {'encoder_hidden_size': [256, 128], 'decoder_hidden_size': [128, 256]}
     cfg['model']['simplex'] = {'hidden_size': 256}
-    cfg['model']['stats'] = make_stats()['{}_{}'.format(cfg['data_name'], cfg['target_mode'])]
+    cfg['model']['stats'] = make_stats('{}_{}'.format(cfg['data_name'], cfg['target_mode']))
 
     tag = cfg['tag']
     cfg[tag] = {}

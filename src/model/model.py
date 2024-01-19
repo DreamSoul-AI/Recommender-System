@@ -24,7 +24,7 @@ def make_loss(output, target):
     if cfg['target_mode'] == 'explicit':
         loss = F.mse_loss(output, target)
     elif cfg['target_mode'] == 'implicit':
-        loss = F.binary_cross_entropy_with_logits(output, target)
+        loss = F.binary_cross_entropy(output, target)
     else:
         raise ValueError('Not valid target mode')
     return loss

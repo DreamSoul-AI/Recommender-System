@@ -11,7 +11,7 @@ class ML100K(Dataset):
     data_name = 'ML100K'
     file = [('https://files.grouplens.org/datasets/movielens/ml-100k.zip', '0e33842e24a9c977be4e0107933c0723')]
 
-    def __init__(self, root, split, target_mode):
+    def __init__(self, root, split, target_mode, transform=None):
         self.root = os.path.expanduser(root)
         self.split = split
         self.target_mode = target_mode
@@ -19,11 +19,14 @@ class ML100K(Dataset):
             self.process()
         self.data = load(os.path.join(self.processed_folder, self.target_mode, self.split))
         self.num_users, self.num_items = load(os.path.join(self.processed_folder, self.target_mode, 'meta'))
+        self.transform = transform
 
     def __getitem__(self, index):
         input = {'user': self.data['user'][index], 'item': self.data['item'][index],
                  'rating': self.data['rating'][index], 'target_item': self.data['target_item'][index],
                  'target_rating': self.data['target_rating'][index]}
+        if self.transform is not None:
+            input = self.transform(input)
         return input
 
     def __len__(self):

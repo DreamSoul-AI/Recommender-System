@@ -9,8 +9,7 @@ if __name__ == "__main__":
     dim = 1
     # data_names = ['ML100K', 'ML1M', 'ML10M', 'ML20M', 'Douban', 'Amazon']
     data_names = ['ML100K']
-    # target_modes = ['explicit', 'implicit']
-    target_modes = ['explicit']
+    target_modes = ['explicit', 'implicit']
     cfg['seed'] = 0
     cfg['tag'] = 'make_dataset'
     process_control()

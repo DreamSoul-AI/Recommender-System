@@ -3,7 +3,7 @@
 control:
   data_name: ML100K
   model_name: base
-  target_mode: explicit
+  target_mode: implicit
 # experiment
 pin_memory: True
 num_workers: 0
