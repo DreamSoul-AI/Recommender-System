@@ -82,13 +82,13 @@ class ML100K(Dataset):
         for i in range(M):
             user_i = [unique_user[i]]
             mask_i = user == unique_user[i]
-            num_test_i = (user[test_idx] == unique_user[i]).sum()
+            num_train_i = max((user[train_idx] == unique_user[i]).sum().item(), 1)
             ts_i = ts[mask_i]
             sorted_idx = np.argsort(ts_i)
-            train_item_i = item[mask_i][sorted_idx][:-num_test_i].tolist()
-            test_item_i = item[mask_i][sorted_idx][-num_test_i:].tolist()
-            train_rating_i = rating[mask_i][sorted_idx][:-num_test_i].tolist()
-            test_rating_i = rating[mask_i][sorted_idx][-num_test_i:].tolist()
+            train_item_i = item[mask_i][sorted_idx][:num_train_i].tolist()
+            test_item_i = item[mask_i][sorted_idx][num_train_i:].tolist()
+            train_rating_i = rating[mask_i][sorted_idx][:num_train_i].tolist()
+            test_rating_i = rating[mask_i][sorted_idx][num_train_i:].tolist()
 
             train_user.append(user_i)
             train_item.append(train_item_i)
