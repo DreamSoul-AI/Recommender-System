@@ -3,6 +3,8 @@ import torch.nn.functional as F
 from collections import defaultdict
 from module import recur
 
+topk_ = 10
+
 
 def make_metric(split, **kwargs):
     data_name = kwargs['data_name']
@@ -16,16 +18,11 @@ def make_metric(split, **kwargs):
             for k in metric_name:
                 metric_name[k].extend(['Loss', 'MSE'])
         elif target_mode == 'implicit':
-            # best = -float('inf')
-            # best_direction = 'up'
-            # best_metric_name = 'NDCG'
-            # for k in metric_name:
-            #     metric_name[k].extend(['Loss', 'NDCG'])
-            best = float('inf')
-            best_direction = 'down'
-            best_metric_name = 'Loss'
+            best = -float('inf')
+            best_direction = 'up'
+            best_metric_name = 'NDCG'
             for k in metric_name:
-                metric_name[k].extend(['Loss'])
+                metric_name[k].extend(['Loss', 'MAP', 'Precision', 'Recall', 'F1', 'HR', 'NDCG'])
         else:
             raise ValueError('Not valid target mode')
     else:
@@ -51,6 +48,86 @@ def MSE(output, target):
     return mse
 
 
+def _setup_matrix(output, target, user, item, attention_mask):
+    item = item[attention_mask]
+    user, user_idx = torch.unique(user, return_inverse=True)
+    item, item_idx = torch.unique(item, return_inverse=True)
+    num_users, num_items = len(user), len(item)
+    output_ = torch.full((num_users, num_items), -float('inf'), device=output.device)
+    target_ = torch.full((num_users, num_items), 0., device=target.device)
+    output_[user_idx, item_idx] = output
+    target_[user_idx, item_idx] = target
+    return output_, target_
+
+
+def _get_topk_targets(output_, target_, topk=topk_):
+    topk = min(topk, target_.size(-1))
+    _, indices = output_.topk(topk, dim=-1)
+    return target_.take_along_dim(indices, dim=-1)
+
+
+def div_no_nan(a, b, na_value=0.):
+    return (a / b).nan_to_num_(nan=na_value, posinf=na_value, neginf=na_value)
+
+
+def MAP(output, target, user, item, attention_mask, topk=topk_):
+    output_, target_ = _setup_matrix(output, target, user, item, attention_mask)
+    topk_target = _get_topk_targets(output_, target_, topk)
+    precision = torch.cumsum(topk_target, dim=-1) / torch.arange(1, topk + 1, device=output.device).float()
+    m = torch.sum(topk_target, dim=-1)
+    ap = (precision * topk_target).sum(dim=-1) / (m + 1e-10)
+    map = ap.mean().item()
+    return map
+
+
+def Precision(output, target, user, item, attention_mask, topk=topk_):
+    output_, target_ = _setup_matrix(output, target, user, item, attention_mask)
+    topk_target = _get_topk_targets(output_, target_, topk)
+    relevant_retrieved_items = torch.sum(topk_target, dim=-1)
+    precision = (relevant_retrieved_items / topk).mean().item()
+    return precision
+
+
+def Recall(output, target, user, item, attention_mask, topk=topk_):
+    output_, target_ = _setup_matrix(output, target, user, item, attention_mask)
+    topk_target = _get_topk_targets(output_, target_, topk)
+    relevant_items = torch.sum(target_, dim=-1)
+    relevant_retrieved_items = torch.sum(topk_target, dim=-1)
+    recall = (relevant_retrieved_items / (relevant_items + 1e-10)).mean().item()
+    return recall
+
+
+def F1(output, target, user, item, attention_mask, topk=topk_):
+    precision = Precision(output, target, user, item, attention_mask, topk)
+    recall = Recall(output, target, user, item, attention_mask, topk)
+    if precision + recall == 0:
+        return 0.0
+    f1 = 2 * (precision * recall) / (precision + recall)
+    return f1
+
+
+def HR(output, target, user, item, attention_mask, topk=topk_):
+    output_, target_ = _setup_matrix(output, target, user, item, attention_mask)
+    sorted_target = _get_topk_targets(output_, target_, topk)
+    hr = (sorted_target.float().sum(dim=-1) > 0).float().mean().item()
+    return hr
+
+
+def DCG(target):
+    batch_size, k = target.shape
+    rank_positions = torch.arange(1, k + 1, dtype=torch.float32, device=target.device).expand(batch_size, -1)
+    dcg = (target / torch.log2(rank_positions + 1)).sum(dim=-1)
+    return dcg
+
+
+def NDCG(output, target, user, item, attention_mask, topk=topk_):
+    output_, target_ = _setup_matrix(output, target, user, item, attention_mask)
+    sorted_target = _get_topk_targets(output_, target_, topk)
+    ideal_target, _ = target_.topk(topk, dim=-1)
+    ndcg = div_no_nan(DCG(sorted_target), DCG(ideal_target)).mean().item()
+    return ndcg
+
+
 class Metric:
     def __init__(self, metric_name, best, best_direction, best_metric_name):
         self.metric_name = metric_name
@@ -73,6 +150,48 @@ class Metric:
                                         'metric': (
                                             lambda input, output: recur(MSE, output['target_rating'],
                                                                         input['target_rating']))}
+                elif m == 'MAP':
+                    metric[split][m] = {'mode': 'batch',
+                                        'metric': (
+                                            lambda input, output: recur(MAP, output['target_rating'],
+                                                                        input['target_rating'], input['user'],
+                                                                        input['target_item'],
+                                                                        input['target_attention_mask']))}
+                elif m == 'Precision':
+                    metric[split][m] = {'mode': 'batch',
+                                        'metric': (
+                                            lambda input, output: recur(MAP, output['target_rating'],
+                                                                        input['target_rating'], input['user'],
+                                                                        input['target_item'],
+                                                                        input['target_attention_mask']))}
+                elif m == 'Recall':
+                    metric[split][m] = {'mode': 'batch',
+                                        'metric': (
+                                            lambda input, output: recur(MAP, output['target_rating'],
+                                                                        input['target_rating'], input['user'],
+                                                                        input['target_item'],
+                                                                        input['target_attention_mask']))}
+                elif m == 'F1':
+                    metric[split][m] = {'mode': 'batch',
+                                        'metric': (
+                                            lambda input, output: recur(MAP, output['target_rating'],
+                                                                        input['target_rating'], input['user'],
+                                                                        input['target_item'],
+                                                                        input['target_attention_mask']))}
+                elif m == 'HR':
+                    metric[split][m] = {'mode': 'batch',
+                                        'metric': (
+                                            lambda input, output: recur(MAP, output['target_rating'],
+                                                                        input['target_rating'], input['user'],
+                                                                        input['target_item'],
+                                                                        input['target_attention_mask']))}
+                elif m == 'NDCG':
+                    metric[split][m] = {'mode': 'batch',
+                                        'metric': (
+                                            lambda input, output: recur(MAP, output['target_rating'],
+                                                                        input['target_rating'], input['user'],
+                                                                        input['target_item'],
+                                                                        input['target_attention_mask']))}
                 else:
                     raise ValueError('Not valid metric name')
         return metric
