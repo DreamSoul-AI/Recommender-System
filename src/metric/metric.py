@@ -14,13 +14,13 @@ def make_metric(split, **kwargs):
         if target_mode == 'explicit':
             best = float('inf')
             best_direction = 'down'
-            best_metric_name = 'MSE'
+            best_metric_name = 'Loss'
             for k in metric_name:
                 metric_name[k].extend(['Loss', 'MSE'])
         elif target_mode == 'implicit':
-            best = -float('inf')
-            best_direction = 'up'
-            best_metric_name = 'NDCG'
+            best = float('inf')
+            best_direction = 'down'
+            best_metric_name = 'Loss'
             for k in metric_name:
                 metric_name[k].extend(['Loss', 'MAP', 'Precision', 'Recall', 'F1', 'HR', 'NDCG'])
         else:
@@ -160,35 +160,35 @@ class Metric:
                 elif m == 'Precision':
                     metric[split][m] = {'mode': 'batch',
                                         'metric': (
-                                            lambda input, output: recur(MAP, output['target_rating'],
+                                            lambda input, output: recur(Precision, output['target_rating'],
                                                                         input['target_rating'], input['user'],
                                                                         input['target_item'],
                                                                         input['target_attention_mask']))}
                 elif m == 'Recall':
                     metric[split][m] = {'mode': 'batch',
                                         'metric': (
-                                            lambda input, output: recur(MAP, output['target_rating'],
+                                            lambda input, output: recur(Recall, output['target_rating'],
                                                                         input['target_rating'], input['user'],
                                                                         input['target_item'],
                                                                         input['target_attention_mask']))}
                 elif m == 'F1':
                     metric[split][m] = {'mode': 'batch',
                                         'metric': (
-                                            lambda input, output: recur(MAP, output['target_rating'],
+                                            lambda input, output: recur(F1, output['target_rating'],
                                                                         input['target_rating'], input['user'],
                                                                         input['target_item'],
                                                                         input['target_attention_mask']))}
                 elif m == 'HR':
                     metric[split][m] = {'mode': 'batch',
                                         'metric': (
-                                            lambda input, output: recur(MAP, output['target_rating'],
+                                            lambda input, output: recur(HR, output['target_rating'],
                                                                         input['target_rating'], input['user'],
                                                                         input['target_item'],
                                                                         input['target_attention_mask']))}
                 elif m == 'NDCG':
                     metric[split][m] = {'mode': 'batch',
                                         'metric': (
-                                            lambda input, output: recur(MAP, output['target_rating'],
+                                            lambda input, output: recur(NDCG, output['target_rating'],
                                                                         input['target_rating'], input['user'],
                                                                         input['target_item'],
                                                                         input['target_attention_mask']))}

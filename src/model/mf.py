@@ -12,6 +12,7 @@ class MF(nn.Module):
         self.hidden_size = hidden_size
         self.user_weight = nn.Embedding(self.user_vocab_size, self.hidden_size)
         self.item_weight = nn.Embedding(self.item_vocab_size, self.hidden_size)
+        self.scaler = nn.Parameter(torch.ones(1, ))
         self.reset_parameters()
 
     def reset_parameters(self):
@@ -27,7 +28,7 @@ class MF(nn.Module):
         embedding = self.item_weight(item)
         return embedding
 
-    def forward(self, user, item, rating, attention_mask, target_item, target_attention_mask):
+    def forward(self, user, item, rating, attention_mask, target_item, target_attention_mask, target_mode):
         shape = item.shape
         target_shape = target_item.shape
         target_user = user.expand(target_shape)
@@ -41,17 +42,19 @@ class MF(nn.Module):
         item_embedding = self.item_embedding(item)
         target_user_embedding = self.user_embedding(target_user)
         target_item_embedding = self.item_embedding(target_item)
-        user_embedding = F.normalize(user_embedding - user_embedding.mean(dim=-1, keepdims=True), dim=-1)
-        item_embedding = F.normalize(item_embedding - item_embedding.mean(dim=-1, keepdims=True), dim=-1)
 
-        target_user_embedding = F.normalize(target_user_embedding -
-                                            target_user_embedding.mean(dim=-1, keepdims=True), dim=-1)
-        target_item_embedding = F.normalize(target_item_embedding -
-                                            target_item_embedding.mean(dim=-1, keepdims=True), dim=-1)
+        user_embedding = F.normalize(user_embedding, dim=-1)
+        item_embedding = F.normalize(item_embedding, dim=-1)
+
+        target_user_embedding = F.normalize(target_user_embedding, dim=-1)
+        target_item_embedding = F.normalize(target_item_embedding, dim=-1)
 
         mf = torch.bmm(user_embedding.unsqueeze(-2), item_embedding.unsqueeze(-1))
         target_mf = torch.bmm(target_user_embedding.unsqueeze(-2),
-                              target_item_embedding.unsqueeze(-1))
+                              target_item_embedding.unsqueeze(-1)) * self.scaler
+        if target_mode == 'implicit':
+            mf = mf * self.scaler
+            target_mf = target_mf * self.scaler
         output_rating = mf.squeeze([-2, -1])
         output_target_rating = target_mf.squeeze([-2, -1])
         return output_rating, output_target_rating

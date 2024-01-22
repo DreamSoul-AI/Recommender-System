@@ -24,7 +24,7 @@ def make_loss(output, target):
     if cfg['target_mode'] == 'explicit':
         loss = F.mse_loss(output, target)
     elif cfg['target_mode'] == 'implicit':
-        loss = F.binary_cross_entropy(output, target)
+        loss = F.binary_cross_entropy_with_logits(output, target)
     else:
         raise ValueError('Not valid target mode')
     return loss
@@ -94,11 +94,7 @@ def make_scheduler(optimizer, cfg):
     return scheduler
 
 
-def normalize(x, xmin, xmax):
-    output = 2 * (x - xmin) / (xmax - xmin) - 1
+def normalize(x, xmin, xmax, new_xmin, new_xmax):
+    output = (x - xmin) / (xmax - xmin) * (new_xmax - new_xmin) + new_xmin
     return output
 
-
-def denormalize(x, xmin, xmax):
-    output = ((xmax - xmin) / 2) * x + (xmax + xmin) / 2
-    return output

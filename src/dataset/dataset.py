@@ -9,16 +9,16 @@ from torch.utils.data.dataloader import default_collate
 from functools import partial
 
 
-def make_dataset(data_name, verbose=True):
+def make_dataset(data_name, target_mode, verbose=True):
     dataset_ = {}
     if verbose:
         print('fetching data {}...'.format(data_name))
     root = './data/{}'.format(data_name)
     if data_name in ['ML100K', 'ML1M', 'ML10M', 'ML20M', 'Douban', 'Amazon']:
         dataset_['train'] = eval(
-            'dataset.{}(root=root, split=\'train\', target_mode=cfg["target_mode"])'.format(data_name))
+            'dataset.{}(root=root, split=\'train\', target_mode=target_mode)'.format(data_name))
         dataset_['test'] = eval(
-            'dataset.{}(root=root, split=\'test\', target_mode=cfg["target_mode"])'.format(data_name))
+            'dataset.{}(root=root, split=\'test\', target_mode=target_mode)'.format(data_name))
     else:
         raise ValueError('Not valid dataset name')
     if verbose:

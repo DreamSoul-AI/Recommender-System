@@ -15,7 +15,7 @@ if __name__ == "__main__":
     process_control()
     for data_name in data_names:
         for target_mode in target_modes:
-            dataset = make_dataset(data_name)
+            dataset = make_dataset(data_name, target_mode)
             stats = {'m': dataset['train'].num_users, 'n': dataset['train'].num_items}
             rating = dataset['train'].data['rating']
             stats['min'] = min(min(rating_i) for rating_i in rating if len(rating_i) > 0)

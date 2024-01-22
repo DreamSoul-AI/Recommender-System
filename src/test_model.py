@@ -39,7 +39,7 @@ def runExperiment():
     cfg['logger_path'] = os.path.join(cfg['tag_path'], 'logger', 'test', 'runs')
     cfg['tokenizer_path'] = os.path.join(cfg['path'], 'tokenizer')
     cfg['result_path'] = os.path.join('output', 'result', cfg['tag'])
-    dataset = make_dataset(cfg['data_name'])
+    dataset = make_dataset(cfg['data_name'], cfg['target_mode'])
     tokenizer = resume(os.path.join(cfg['tokenizer_path']))[cfg['data_name']]
     dataset = process_dataset(dataset, tokenizer)
     model = make_model(cfg['model'], tokenizer)
