@@ -36,7 +36,7 @@ def runExperiment():
     cfg['tag_path'] = os.path.join(cfg['path'], cfg['tag'])
     cfg['checkpoint_path'] = os.path.join(cfg['tag_path'], 'checkpoint')
     cfg['best_path'] = os.path.join(cfg['tag_path'], 'best')
-    cfg['logger_path'] = os.path.join(cfg['tag_path'], 'logger', 'test', 'runs')
+    cfg['logger_path'] = os.path.join('output', 'logger', 'test', 'runs', cfg['tag'])
     cfg['tokenizer_path'] = os.path.join(cfg['path'], 'tokenizer')
     cfg['result_path'] = os.path.join('output', 'result', cfg['tag'])
     dataset = make_dataset(cfg['data_name'], cfg['target_mode'])
@@ -66,6 +66,7 @@ def test(data_loader, model, logger):
             output = model(input)
             evaluation = logger.evaluate('test', 'batch', input, output)
             logger.append(evaluation, 'test', input_size)
+            logger.add('test', input, output)
         evaluation = logger.evaluate('test', 'full')
         logger.append(evaluation, 'test', input_size)
         info = {'info': ['Model: {}'.format(cfg['tag']),

@@ -10,9 +10,9 @@ def process_control():
     batch_size = {'ML100K': 100, 'ML1M': 500, 'ML10M': 1000, 'ML20M': 1000, 'Douban': 100, 'Amazon': 500}
     cfg['batch_size'] = batch_size[cfg['data_name']]
     cfg['step_period'] = 1
-    cfg['num_steps'] = 80000
-    cfg['eval_period'] = 200
-    cfg['num_epochs'] = 200
+    cfg['num_steps'] = 30
+    cfg['eval_period'] = 30
+    # cfg['num_epochs'] = 200
     if cfg['model_name'] == 'base':
         cfg['num_epochs'] = 1
     cfg['collate_mode'] = 'dict'
