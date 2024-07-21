@@ -12,7 +12,7 @@ def process_control():
     cfg['step_period'] = 1
     cfg['num_steps'] = 30
     cfg['eval_period'] = 30
-    # cfg['num_epochs'] = 200
+    # cfg['num_epochs'] = 20
     if cfg['model_name'] == 'base':
         cfg['num_epochs'] = 1
     cfg['collate_mode'] = 'dict'
@@ -30,8 +30,8 @@ def process_control():
     tag = cfg['tag']
     cfg[tag] = {}
     cfg[tag]['optimizer'] = {}
-    cfg[tag]['optimizer']['optimizer_name'] = 'Adam'
-    cfg[tag]['optimizer']['lr'] = 1e-3
+    cfg[tag]['optimizer']['optimizer_name'] = 'SGD'
+    cfg[tag]['optimizer']['lr'] = 1e-1
     cfg[tag]['optimizer']['momentum'] = 0.9
     cfg[tag]['optimizer']['betas'] = (0.9, 0.999)
     cfg[tag]['optimizer']['weight_decay'] = 5e-4

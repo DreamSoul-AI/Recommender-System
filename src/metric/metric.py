@@ -17,6 +17,8 @@ def make_metric(split, **kwargs):
             best_metric_name = 'Loss'
             for k in metric_name:
                 metric_name[k].extend(['Loss', 'MSE'])
+                if k == 'test':
+                    metric_name[k].extend(['RMSE'])
         elif target_mode == 'implicit':
             best = float('inf')
             best_direction = 'down'
@@ -128,6 +130,26 @@ def NDCG(output, target, user, item, attention_mask, topk=topk_):
     return ndcg
 
 
+class RMSE:
+    def __init__(self):
+        self.reset()
+
+    def reset(self):
+        self.se = 0
+        self.count = 0
+        return
+
+    def add(self, input, output):
+        self.se += F.mse_loss(output['target_rating'], input['target_rating'], reduction='sum')
+        self.count += output['target_rating'].numel()
+        return
+
+    def __call__(self, input, output):
+        rmse = ((self.se / self.count) ** 0.5).item()
+        self.reset()
+        return rmse
+
+
 class Metric:
     def __init__(self, metric_name, best, best_direction, best_metric_name):
         self.metric_name = metric_name
@@ -150,6 +172,8 @@ class Metric:
                                         'metric': (
                                             lambda input, output: recur(MSE, output['target_rating'],
                                                                         input['target_rating']))}
+                elif m == 'RMSE':
+                    metric[split][m] = {'mode': 'full', 'metric': RMSE()}
                 elif m == 'MAP':
                     metric[split][m] = {'mode': 'batch',
                                         'metric': (

@@ -17,19 +17,17 @@ class RecommenderSystem(nn.Module):
         user, item, rating, attention_mask = input['user'], input['item'], input['rating'], input['attention_mask']
         target_item, target_rating, target_attention_mask = (input['target_item'], input['target_rating'],
                                                              input['target_attention_mask'])
-        if self.target_mode == 'explicit' and isinstance(self.base, model.MF):
+        if self.target_mode == 'explicit':
             rating = model.normalize(rating, self.stats['min'], self.stats['max'], -1, 1)
             target_rating = model.normalize(target_rating, self.stats['min'], self.stats['max'], -1, 1)
         output['rating'], output['target_rating'] = self.base(user, item, rating, attention_mask, target_item,
                                                               target_attention_mask, self.target_mode)
         output['loss'] = model.make_loss(output['rating'], rating[attention_mask].detach())
         output['target_loss'] = model.make_loss(output['target_rating'], target_rating[target_attention_mask].detach())
-        if self.target_mode == 'explicit' and isinstance(self.base, model.MF):
+        if self.target_mode == 'explicit':
             output['rating'] = model.normalize(output['rating'], -1, 1, self.stats['min'], self.stats['max'])
             output['target_rating'] = model.normalize(output['target_rating'], -1, 1, self.stats['min'],
                                                       self.stats['max'])
-        # print(input['rating'].max(), input['rating'].min())
-        # print(output['rating'].max(), output['rating'].min())
         input['rating'] = input['rating'][attention_mask]
         input['target_rating'] = input['target_rating'][target_attention_mask]
         return output

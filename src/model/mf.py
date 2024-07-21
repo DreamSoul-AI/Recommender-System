@@ -48,10 +48,9 @@ class MF(nn.Module):
 
         target_user_embedding = F.normalize(target_user_embedding, dim=-1)
         target_item_embedding = F.normalize(target_item_embedding, dim=-1)
-
         mf = torch.bmm(user_embedding.unsqueeze(-2), item_embedding.unsqueeze(-1))
         target_mf = torch.bmm(target_user_embedding.unsqueeze(-2),
-                              target_item_embedding.unsqueeze(-1)) * self.scaler
+                              target_item_embedding.unsqueeze(-1))
         if target_mode == 'implicit':
             mf = mf * self.scaler
             target_mf = target_mf * self.scaler
