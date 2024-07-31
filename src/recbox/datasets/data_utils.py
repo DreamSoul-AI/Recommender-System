@@ -4,7 +4,7 @@ import logging
 import numpy as np
 import multiprocessing as mp
 import gc
-import pdb
+
 
 def save_h5(darray_dict, data_path):
     logging.info("Saving data to h5: " + data_path)
@@ -59,7 +59,6 @@ def transform_h5(feature_encoder, ddf, filename, preprocess=False, block_size=0)
         if preprocess:
             df_block = feature_encoder.preprocess(df_block)
         darray_dict = feature_encoder.transform(df_block)
-        #pdb.set_trace()
         save_h5(darray_dict, os.path.join(feature_encoder.data_dir, filename))
 
     if block_size > 0:
@@ -83,11 +82,10 @@ def build_dataset(feature_encoder, item_corpus=None, train_data=None, valid_data
     """ Build feature_map and transform h5 data """
     
     # Load csv data
-    
     train_ddf = feature_encoder.read_csv(train_data, **kwargs)
     valid_ddf = None
     test_ddf = None
-    pdb.set_trace()
+
     # Split data for train/validation/test
     if valid_size > 0 or test_size > 0:
         valid_ddf = feature_encoder.read_csv(valid_data, **kwargs)
@@ -100,7 +98,7 @@ def build_dataset(feature_encoder, item_corpus=None, train_data=None, valid_data
     corpus_ddf = feature_encoder.preprocess(corpus_ddf)
     train_ddf = feature_encoder.preprocess(train_ddf)
     feature_encoder.fit(train_ddf, corpus_ddf, **kwargs)
-    pdb.set_trace()
+
     # transform corpus_ddf
     item_corpus_dict = feature_encoder.transform(corpus_ddf)
     save_h5(item_corpus_dict, os.path.join(feature_encoder.data_dir, 'item_corpus.h5'))
