@@ -4,10 +4,10 @@ from .stats import make_stats
 
 def process_control():
     cfg['data_name'] = cfg['control']['data_name']
-    cfg['target_mode'] = cfg['control']['target_mode']
+    # cfg['target_mode'] = cfg['control']['target_mode']
     cfg['model_name'] = cfg['control']['model_name']
 
-    batch_size = {'ML100K': 100, 'ML1M': 500, 'ML10M': 1000, 'ML20M': 1000, 'Douban': 100, 'Amazon': 500}
+    batch_size = {'ML100K': 100, 'ML1M': 500, 'ML10M': 1000, 'ML20M': 1000, 'Douban': 100, 'AmazonBeauty': 500}
     cfg['batch_size'] = batch_size[cfg['data_name']]
     cfg['step_period'] = 1
     cfg['num_steps'] = 30
@@ -18,14 +18,14 @@ def process_control():
     cfg['collate_mode'] = 'dict'
 
     cfg['model'] = {}
-    cfg['model']['target_mode'] = cfg['target_mode']
+    # cfg['model']['target_mode'] = cfg['target_mode']
     cfg['model']['model_name'] = cfg['model_name']
     cfg['model']['base'] = {}
     cfg['model']['mf'] = {'hidden_size': 256}
     cfg['model']['nmf'] = {'hidden_size': [256, 128]}
     cfg['model']['ae'] = {'encoder_hidden_size': [256, 128], 'decoder_hidden_size': [128, 256]}
     cfg['model']['simplex'] = {'hidden_size': 256}
-    cfg['model']['stats'] = make_stats('{}_{}'.format(cfg['data_name'], cfg['target_mode']))
+    cfg['model']['stats'] = make_stats('{}'.format(cfg['data_name']))
 
     tag = cfg['tag']
     cfg[tag] = {}

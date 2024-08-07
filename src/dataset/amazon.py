@@ -17,9 +17,9 @@ class AmazonBeauty(Dataset):
         self.root = os.path.expanduser(root)
         self.split = split
         self.transform = transform
-        # if not check_exists(self.processed_folder):
-        self.process()
-        self.data, self.meta = load(os.path.join(self.processed_folder, '{}'.format(self.split)), mode='pickle')
+        if not check_exists(self.processed_folder):
+            self.process()
+        self.data, self.meta = load(os.path.join(self.processed_folder, 'data'), mode='pickle')
         self.train_data_csr = self.data['train'].tocsr()
 
     def __getitem__(self, index):
@@ -58,7 +58,7 @@ class AmazonBeauty(Dataset):
         if not check_exists(self.raw_folder):
             self.download()
         dataset = self.make_data()
-        save(dataset, os.path.join(self.processed_folder), mode='pickle')
+        save(dataset, os.path.join(self.processed_folder, 'data'), mode='pickle')
         return
 
     def download(self):
@@ -112,10 +112,16 @@ class AmazonBeauty(Dataset):
             user_token = tokens[0]
             item_tokens = tokens[1:]
 
-            user_index = user_token_to_index[user_token]
+            if user_token in user_token_to_index:
+                user_index = user_token_to_index[user_token]
+            else:
+                break
 
             for item_token in item_tokens:
-                item_index = item_token_to_index[item_token]
+                if item_token in item_token_to_index:
+                    item_index = item_token_to_index[item_token]
+                else:
+                    continue
                 test_users.append(user_index)
                 test_items.append(item_index)
 

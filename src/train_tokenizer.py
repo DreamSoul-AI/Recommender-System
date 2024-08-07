@@ -34,7 +34,7 @@ def runExperiment():
     cfg['path'] = os.path.join('output', 'exp')
     cfg['tokenizer_path'] = os.path.join(cfg['path'], 'tokenizer')
     tokenizer = make_tokenizer()
-    dataset = make_dataset(cfg['data_name'], cfg['target_mode'])
+    dataset = make_dataset(cfg['data_name'])
     tokenizer.train(True)
     dataset = process_dataset(dataset, tokenizer)
     tokenizer.train(False)

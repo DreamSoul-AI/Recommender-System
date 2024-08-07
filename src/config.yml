@@ -1,9 +1,8 @@
 ---
 # control
 control:
-  data_name: ML100K
+  data_name: AmazonBeauty
   model_name: base
-  target_mode: explicit
 # experiment
 pin_memory: True
 num_workers: 0
