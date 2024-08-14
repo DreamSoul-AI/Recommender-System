@@ -3,21 +3,17 @@ import torch
 
 
 class Tokenizer:
-    def __init__(self, unk_token='[UNK]', pad_token='[PAD]', cls_token='[CLS]', sep_token='[SEP]', if_train=False):
+    def __init__(self, pad_token='[PAD]', if_train=False):
         super().__init__()
         self.user_vocab = {}
         self.inv_user_vocab = {}
         self.item_vocab = {}
         self.inv_item_vocab = {}
-        self.unk_token = unk_token
         self.pad_token = pad_token
-        self.cls_token = cls_token
-        self.sep_token = sep_token
         self.if_train = if_train
         self.padding_direction = 'right'
-        self.special_token = [self.unk_token, self.pad_token, self.cls_token, self.sep_token]
+        self.special_token = [self.pad_token]
         for i in range(len(self.special_token)):
-            self.update(self.special_token[i], self.user_vocab, self.inv_user_vocab)
             self.update(self.special_token[i], self.item_vocab, self.inv_item_vocab)
 
     def update(self, token, vocab, inv_vocab):
@@ -144,10 +140,10 @@ class Tokenizer:
         return user, item, target_item
 
     def convert_token_to_id(self, token, vocab):
-        return vocab.get(token, vocab[self.unk_token])
+        return vocab.get(token, vocab[self.pad_token])
 
     def convert_id_to_token(self, index, inv_vocab):
-        return inv_vocab.get(index, self.unk_token)
+        return inv_vocab.get(index, self.pad_token)
 
     def convert_tokens_to_string(self, tokens):
         return ' '.join(tokens)

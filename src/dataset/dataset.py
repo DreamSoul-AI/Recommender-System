@@ -1,15 +1,12 @@
 import dataset
 import torch
 import numpy as np
-from datasets import Dataset
-from collections import defaultdict
 from config import cfg
 from torch.utils.data import DataLoader
 from torch.utils.data.dataloader import default_collate
-from functools import partial
 
 
-def make_dataset(data_name, target_mode=None, verbose=True):
+def make_dataset(data_name, tokenizer, verbose=True):
     dataset_ = {}
     if verbose:
         print('fetching data {}...'.format(data_name))
@@ -22,6 +19,18 @@ def make_dataset(data_name, target_mode=None, verbose=True):
     elif data_name in ['AmazonBeauty']:
         dataset_['train'] = eval('dataset.{}(root=root, split=\'train\')'.format(data_name))
         dataset_['test'] = eval('dataset.{}(root=root, split=\'test\')'.format(data_name))
+
+        if cfg['max_length_mode'] == 'longest':
+            max_length = dataset_['train'].max_length
+            cfg['max_length'] = int(16 * np.ceil(max_length / 16))
+        else:
+            cfg['max_length'] = 128
+
+        dataset_['train'].transform = dataset.Compose([Padding(cfg['max_length']),
+                                                       NegativeSampling(tokenizer)])
+        dataset_['test'].transform = dataset.Compose([Padding(cfg['max_length']),
+                                                      NegativeSampling(tokenizer)])
+
     else:
         raise ValueError('Not valid dataset name')
     if verbose:
@@ -81,82 +90,68 @@ def make_data_loader(dataset, batch_size, num_steps=None, step=0, step_period=1,
     return data_loader
 
 
-def process_dataset(dataset, tokenizer):
-    cfg['max_length'] = {'train': {'item': max([len(x) for x in dataset['train'].data['item']]),
-                                   'target_item': max([len(x) for x in dataset['train'].data['target_item']])},
-                         'test': {'item': max([len(x) for x in dataset['test'].data['item']]),
-                                  'target_item': max([len(x) for x in dataset['test'].data['target_item']])}}
-
-    def preprocess_function(max_length, examples):
-        model_inputs = tokenizer(examples, max_length=max_length, padding=True, truncation=False,
-                                 return_tensors='pt')
-        return model_inputs
-
-    processed_dataset = {}
-    for split in dataset:
-        data = defaultdict(list)
-        for k in dataset[split].data:
-            data[k].extend(dataset[split].data[k])
-        processed_dataset[split] = Dataset.from_dict(data)
-        preprocess_function_ = partial(preprocess_function, cfg['max_length'][split])
-        processed_dataset[split] = processed_dataset[split].map(
-            preprocess_function_,
-            batched=True,
-            num_proc=1,
-            load_from_cache_file=False,
-            desc="Preprocess dataset",
-            batch_size=50,
-        )
-        if cfg['target_mode'] == 'implicit':
-            processed_dataset[split].set_transform(NagativeSampling(tokenizer))
-
-    cfg['data_size'] = {'train': len(dataset['train']), 'test': len(dataset['test'])}
-    cfg['num_users'], cfg['num_items'] = dataset['train'].num_users, dataset['train'].num_items
+def process_dataset(dataset):
+    processed_dataset = dataset
+    cfg['data_size'] = {k: len(processed_dataset[k]) for k in processed_dataset}
     if 'num_epochs' in cfg:
         cfg['num_steps'] = int(np.ceil(len(processed_dataset['train']) / cfg['batch_size'])) * cfg['num_epochs']
         cfg['eval_period'] = int(np.ceil(len(processed_dataset['train']) / cfg['batch_size']))
         cfg[cfg['tag']]['optimizer']['num_steps'] = cfg['num_steps']
 
-    cfg['model']['user_vocab_size'] = len(tokenizer.user_vocab)
-    cfg['model']['item_vocab_size'] = len(tokenizer.item_vocab)
     return processed_dataset
 
 
-class NagativeSampling(torch.nn.Module):
-    def __init__(self, tokenizer):
+class Padding(torch.nn.Module):
+    def __init__(self, max_length):
         super().__init__()
-        item_id = set(tokenizer.inv_item_vocab.keys())
-        special_id = set([tokenizer.convert_token_to_id(x, tokenizer.item_vocab) for x in tokenizer.special_token])
-        self.data_id = item_id - special_id
-        self.pad_id = tokenizer.convert_token_to_id(tokenizer.pad_token, tokenizer.item_vocab)
-        self.negative_ratio = 1.0
-
-    def make_negative_sample(self, item, positive_seq_len, negative_seq_len, pad_len_i):
-        positive_item = item[:positive_seq_len]
-        negative_item_pool = torch.tensor(list(self.data_id - set(positive_item)))
-        negative_item = negative_item_pool[torch.randperm(len(negative_item_pool))[:negative_seq_len]].tolist()
-        item = positive_item + negative_item + [self.pad_id] * pad_len_i
-        rating = [1.] * len(positive_item) + [0.] * len(negative_item) + [0.] * pad_len_i
-        attention_mask = [True] * len(positive_item) + [True] * len(negative_item) + [False] * pad_len_i
-        return item, rating, attention_mask
+        self.pad_id = -100
+        self.max_length = max_length
 
     def forward(self, input):
-        max_seq_len = torch.tensor(input['attention_mask']).size(1)
-        positive_seq_len = torch.tensor(input['attention_mask']).sum(dim=1)
-        negative_seq_len = torch.round(self.negative_ratio * positive_seq_len).long()
-        new_max_seq_len = max(positive_seq_len.max() + negative_seq_len.max(), max_seq_len)
+        if len(input['item_hist']) > self.max_length:
+            input['item_hist'] = input['item_hist'][:self.max_length]
+        else:
+            pad_length = self.max_length - len(input['item_hist'])
+            input['item_hist'] = torch.cat(
+                [input['item_hist'], input['item_hist'].new_tensor([self.pad_id] * pad_length)])
+        return input
 
-        target_max_seq_len = torch.tensor(input['target_attention_mask']).size(1)
-        target_positive_seq_len = torch.tensor(input['target_attention_mask']).sum(dim=1)
-        target_negative_seq_len = torch.round(self.negative_ratio * target_positive_seq_len).long()
-        target_new_max_seq_len = max(target_positive_seq_len.max() + target_negative_seq_len.max(), target_max_seq_len)
-        for i in range(len(input['user'])):
-            pad_len_i = new_max_seq_len - (positive_seq_len[i] + negative_seq_len[i])
-            target_pad_len_i = target_new_max_seq_len - (target_positive_seq_len[i] + target_negative_seq_len[i])
-            input['item'][i], input['rating'][i], input['attention_mask'][i] = self.make_negative_sample(
-                input['item'][i], positive_seq_len[i], negative_seq_len[i], pad_len_i)
-            input['target_item'][i], input['target_rating'][i], input['target_attention_mask'][i] = (
-                self.make_negative_sample(input['target_item'][i], target_positive_seq_len[i],
-                                          target_negative_seq_len[i], target_pad_len_i))
+
+class NegativeSampling(torch.nn.Module):
+    def __init__(self, tokenizer):
+        super().__init__()
+        # item_id = set(tokenizer.inv_item_vocab.keys())
+        # special_id = set([tokenizer.convert_token_to_id(x, tokenizer.item_vocab) for x in tokenizer.special_token])
+        # self.data_id = item_id - special_id
+        # self.pad_id = tokenizer.convert_token_to_id(tokenizer.pad_token, tokenizer.item_vocab)
+        # self.negative_ratio = 1.0
+
+    # def make_negative_sample(self, item, positive_seq_len, negative_seq_len, pad_len_i):
+    #     positive_item = item[:positive_seq_len]
+    #     negative_item_pool = torch.tensor(list(self.data_id - set(positive_item)))
+    #     negative_item = negative_item_pool[torch.randperm(len(negative_item_pool))[:negative_seq_len]].tolist()
+    #     item = positive_item + negative_item + [self.pad_id] * pad_len_i
+    #     rating = [1.] * len(positive_item) + [0.] * len(negative_item) + [0.] * pad_len_i
+    #     attention_mask = [True] * len(positive_item) + [True] * len(negative_item) + [False] * pad_len_i
+    #     return item, rating, attention_mask
+
+    def forward(self, input):
+        # max_seq_len = torch.tensor(input['attention_mask']).size(1)
+        # positive_seq_len = torch.tensor(input['attention_mask']).sum(dim=1)
+        # negative_seq_len = torch.round(self.negative_ratio * positive_seq_len).long()
+        # new_max_seq_len = max(positive_seq_len.max() + negative_seq_len.max(), max_seq_len)
+        #
+        # target_max_seq_len = torch.tensor(input['target_attention_mask']).size(1)
+        # target_positive_seq_len = torch.tensor(input['target_attention_mask']).sum(dim=1)
+        # target_negative_seq_len = torch.round(self.negative_ratio * target_positive_seq_len).long()
+        # target_new_max_seq_len = max(target_positive_seq_len.max() + target_negative_seq_len.max(), target_max_seq_len)
+        # for i in range(len(input['user'])):
+        #     pad_len_i = new_max_seq_len - (positive_seq_len[i] + negative_seq_len[i])
+        #     target_pad_len_i = target_new_max_seq_len - (target_positive_seq_len[i] + target_negative_seq_len[i])
+        #     input['item'][i], input['rating'][i], input['attention_mask'][i] = self.make_negative_sample(
+        #         input['item'][i], positive_seq_len[i], negative_seq_len[i], pad_len_i)
+        #     input['target_item'][i], input['target_rating'][i], input['target_attention_mask'][i] = (
+        #         self.make_negative_sample(input['target_item'][i], target_positive_seq_len[i],
+        #                                   target_negative_seq_len[i], target_pad_len_i))
 
         return input

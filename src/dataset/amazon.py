@@ -23,12 +23,16 @@ class AmazonBeauty(Dataset):
         self.train_data_csr = self.data['train'].tocsr()
 
     def __getitem__(self, index):
-        user, item, target = self.data[self.split].row, self.data[self.split].col, self.data[self.split].data
-        item_hist = self.train_data_csr[user]
-        print(user, item, target)
-        print(item_hist)
-        exit()
-
+        user, item, rating = self.data[self.split].row, self.data[self.split].col, self.data[self.split].data
+        user_i = torch.tensor(user[index], dtype=torch.long)
+        item_i = torch.tensor(item[index], dtype=torch.long)
+        rating_i = torch.tensor(rating[index], dtype=torch.long)
+        item_hist_i = self.train_data_csr[user_i, :].indices
+        item_hist_i = item_hist_i[item_hist_i != item[index]]
+        item_hist_i = torch.tensor(item_hist_i, dtype=torch.long)
+        input = {'user': user_i, 'item': item_i, 'rating': rating_i, 'item_hist': item_hist_i}
+        if self.transform is not None:
+            input = self.transform(input)
         return input
 
     def __len__(self):
@@ -45,6 +49,12 @@ class AmazonBeauty(Dataset):
     @property
     def num_ratings(self):
         return self.meta['num_ratings'][self.split]
+
+    @property
+    def max_length(self):
+        non_zero_counts = np.diff(self.train_data_csr.indptr)
+        max_non_zeros = non_zero_counts.max()
+        return max_non_zeros
 
     @property
     def processed_folder(self):

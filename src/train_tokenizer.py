@@ -3,9 +3,9 @@ import os
 import torch
 import torch.backends.cudnn as cudnn
 from config import cfg, process_args
-from dataset import make_dataset, process_dataset
+from dataset import make_dataset, make_data_loader, process_dataset
 from model import make_tokenizer
-from module import save, process_control
+from module import save, to_device, process_control
 
 cudnn.benchmark = True
 parser = argparse.ArgumentParser(description='cfg')
@@ -34,11 +34,21 @@ def runExperiment():
     cfg['path'] = os.path.join('output', 'exp')
     cfg['tokenizer_path'] = os.path.join(cfg['path'], 'tokenizer')
     tokenizer = make_tokenizer()
-    dataset = make_dataset(cfg['data_name'])
-    tokenizer.train(True)
-    dataset = process_dataset(dataset, tokenizer)
+    dataset = make_dataset(cfg['data_name'], tokenizer)
+    dataset = process_dataset(dataset)
+    data_loader = make_data_loader(dataset, cfg[cfg['tag']]['optimizer']['batch_size'])
+    train(data_loader['train'], tokenizer)
     tokenizer.train(False)
     save(tokenizer, os.path.join(cfg['tokenizer_path'], cfg['data_name']))
+    return
+
+
+def train(data_loader, tokenizer):
+    with torch.no_grad():
+        tokenizer.train(True)
+        for i, input in enumerate(data_loader):
+            input = to_device(input, cfg['device'])
+            tokenizer(input)
     return
 
 

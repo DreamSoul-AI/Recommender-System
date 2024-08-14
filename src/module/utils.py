@@ -29,5 +29,6 @@ def recur(fn, input, *args):
     elif input is None:
         output = None
     else:
+        print(input)
         raise ValueError('Not valid input type')
     return output

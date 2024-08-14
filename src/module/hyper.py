@@ -17,6 +17,8 @@ def process_control():
         cfg['num_epochs'] = 1
     cfg['collate_mode'] = 'dict'
 
+    cfg['max_length_mode'] = 'longest'
+
     cfg['model'] = {}
     # cfg['model']['target_mode'] = cfg['target_mode']
     cfg['model']['model_name'] = cfg['model_name']
