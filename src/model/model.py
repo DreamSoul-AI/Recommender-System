@@ -4,29 +4,18 @@ import torch.nn.functional as F
 import torch.optim as optim
 import model
 from .rs import rs
-from .tokenizer import Tokenizer
 from transformers import get_linear_schedule_with_warmup
 from config import cfg
 
 
-def make_model(cfg, tokenizer):
+def make_model(cfg):
     base = eval('model.{}(cfg)'.format(cfg['model_name']))
-    model = rs(tokenizer, base, cfg)
+    model = rs(base, cfg)
     return model
 
 
-def make_tokenizer():
-    tokenizer = Tokenizer()
-    return tokenizer
-
-
 def make_loss(output, target):
-    if cfg['target_mode'] == 'explicit':
-        loss = F.mse_loss(output, target)
-    elif cfg['target_mode'] == 'implicit':
-        loss = F.binary_cross_entropy_with_logits(output, target)
-    else:
-        raise ValueError('Not valid target mode')
+    loss = F.binary_cross_entropy(output.float(), target.float())
     return loss
 
 
@@ -97,4 +86,3 @@ def make_scheduler(optimizer, cfg):
 def normalize(x, xmin, xmax, new_xmin, new_xmax):
     output = (x - xmin) / (xmax - xmin) * (new_xmax - new_xmin) + new_xmin
     return output
-

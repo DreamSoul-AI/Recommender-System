@@ -10,9 +10,10 @@ if __name__ == "__main__":
     data_names = ['AmazonBeauty']
     cfg['seed'] = 0
     cfg['tag'] = 'make_dataset'
+    cfg['remake_stats'] = True
     process_control()
     for data_name in data_names:
-        dataset = make_dataset(data_name)
+        dataset = make_dataset(data_name, transform=False)
         stats = {'num_users': dataset['train'].num_users, 'num_items': dataset['train'].num_items,
                  'num_ratings': {'train': dataset['train'].num_ratings, 'test': dataset['test'].num_ratings}}
         rating = dataset['train'].data['train'].data

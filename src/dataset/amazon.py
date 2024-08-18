@@ -36,7 +36,7 @@ class AmazonBeauty(Dataset):
         return input
 
     def __len__(self):
-        return len(self.data)
+        return self.num_ratings
 
     @property
     def num_users(self):

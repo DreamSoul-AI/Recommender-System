@@ -8,25 +8,13 @@ topk_ = 10
 
 def make_metric(split, **kwargs):
     data_name = kwargs['data_name']
-    target_mode = kwargs['target_mode']
     metric_name = {k: [] for k in split}
-    if data_name in ['ML100K']:
-        if target_mode == 'explicit':
-            best = float('inf')
-            best_direction = 'down'
-            best_metric_name = 'Loss'
-            for k in metric_name:
-                metric_name[k].extend(['Loss', 'MSE'])
-                if k == 'test':
-                    metric_name[k].extend(['RMSE'])
-        elif target_mode == 'implicit':
-            best = float('inf')
-            best_direction = 'down'
-            best_metric_name = 'Loss'
-            for k in metric_name:
-                metric_name[k].extend(['Loss', 'MAP', 'Precision', 'Recall', 'F1', 'HR', 'NDCG'])
-        else:
-            raise ValueError('Not valid target mode')
+    if data_name in ['AmazonBeauty']:
+        best = float('inf')
+        best_direction = 'down'
+        best_metric_name = 'Loss'
+        for k in metric_name:
+            metric_name[k].extend(['Loss'])
     else:
         raise ValueError('Not valid data name')
     metric = Metric(metric_name, best, best_direction, best_metric_name)

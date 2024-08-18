@@ -5,36 +5,18 @@ import model
 
 
 class RecommenderSystem(nn.Module):
-    def __init__(self, tokenizer, base, target_mode, stats):
+    def __init__(self, base):
         super().__init__()
-        self.tokenizer = tokenizer
         self.base = base
-        self.target_mode = target_mode
-        self.stats = stats
 
     def forward(self, input):
         output = {}
-        user, item, rating, attention_mask = input['user'], input['item'], input['rating'], input['attention_mask']
-        target_item, target_rating, target_attention_mask = (input['target_item'], input['target_rating'],
-                                                             input['target_attention_mask'])
-        if self.target_mode == 'explicit':
-            rating = model.normalize(rating, self.stats['min'], self.stats['max'], -1, 1)
-            target_rating = model.normalize(target_rating, self.stats['min'], self.stats['max'], -1, 1)
-        output['rating'], output['target_rating'] = self.base(user, item, rating, attention_mask, target_item,
-                                                              target_attention_mask, self.target_mode)
-        output['loss'] = model.make_loss(output['rating'], rating[attention_mask].detach())
-        output['target_loss'] = model.make_loss(output['target_rating'], target_rating[target_attention_mask].detach())
-        if self.target_mode == 'explicit':
-            output['rating'] = model.normalize(output['rating'], -1, 1, self.stats['min'], self.stats['max'])
-            output['target_rating'] = model.normalize(output['target_rating'], -1, 1, self.stats['min'],
-                                                      self.stats['max'])
-        input['rating'] = input['rating'][attention_mask]
-        input['target_rating'] = input['target_rating'][target_attention_mask]
+        user, item, rating, item_hist = input['user'], input['item'], input['rating'], input['item_hist']
+        output['rating'] = self.base(user, item, rating, item_hist)
+        output['loss'] = model.make_loss(output['rating'], rating)
         return output
 
 
-def rs(tokenizer, model, cfg):
-    target_mode = cfg['target_mode']
-    stats = cfg['stats']
-    model = RecommenderSystem(tokenizer, model, target_mode, stats)
+def rs(model, cfg):
+    model = RecommenderSystem(model)
     return model

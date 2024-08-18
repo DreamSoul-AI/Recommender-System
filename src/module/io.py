@@ -22,11 +22,11 @@ def makedir_exist_ok(path):
     return
 
 
-def save(input, path, mode='pickle'):
+def save(input, path, mode='torch'):
     dirname = os.path.dirname(path)
     makedir_exist_ok(dirname)
     if mode == 'torch':
-        torch.save(input, path)
+        torch.save(input, path, )
     elif mode == 'np':
         np.save(path, input, allow_pickle=True)
     elif mode == 'pickle':
@@ -36,16 +36,15 @@ def save(input, path, mode='pickle'):
     return
 
 
-def load(path, mode='pickle'):
+def load(path, mode='torch'):
     if mode == 'torch':
-        return torch.load(path, map_location=lambda storage, loc: storage)
+        return torch.load(path, weights_only=False)
     elif mode == 'np':
         return np.load(path, allow_pickle=True)
     elif mode == 'pickle':
         return pickle.load(open(path, 'rb'))
     else:
         raise ValueError('Not valid save mode')
-    return
 
 
 def save_img(img, path, nrow=10, padding=1, pad_value=0, value_range=None):

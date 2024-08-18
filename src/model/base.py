@@ -1,32 +1,27 @@
-import math
 import torch
 import torch.nn as nn
-import torch.nn.functional as F
-from config import cfg
 
 
 class Base(nn.Module):
-    def __init__(self, user_vocab_size, item_vocab_size):
+    def __init__(self, num_users, num_items):
         super().__init__()
-        self.register_buffer('base', torch.zeros(item_vocab_size))
-        self.register_buffer('count', torch.zeros(item_vocab_size))
+        self.num_users = num_users
+        self.num_items = num_items
+        self.register_buffer('base', torch.zeros(num_items, dtype=torch.float32))
+        self.register_buffer('count', torch.zeros(num_items, dtype=torch.long))
         self.eps = 1e-8
         self.place_holder = nn.Parameter(torch.zeros(1, ))
 
-    def forward(self, user, item, rating, attention_mask, target_item, target_attention_mask, target_mode):
-        item = item[attention_mask]
-        target_item = target_item[target_attention_mask]
-        if self.training and rating is not None:
-            rating = rating[attention_mask]
-            self.base.scatter_add_(0, item, rating)
-            self.count.scatter_add_(0, item, rating.new_ones(rating.size()))
+    def forward(self, user, item, rating, item_hist):
+        if self.training:
+            self.base.scatter_add_(0, item.view(-1), rating.view(-1).to(self.base.dtype))
+            self.count.scatter_add_(0, item.view(-1), self.count.new_ones(rating.view(-1).size()))
         output_rating = self.base[item] / (self.count[item] + self.eps)
-        output_target_rating = self.base[target_item] / (self.count[target_item] + self.eps)
-        return output_rating, output_target_rating
+        return output_rating
 
 
 def base(cfg):
-    user_vocab_size = cfg['user_vocab_size']
-    item_vocab_size = cfg['item_vocab_size']
-    model = Base(user_vocab_size, item_vocab_size)
+    num_users = cfg['stats']['num_users']
+    num_items = cfg['stats']['num_items']
+    model = Base(num_users, num_items)
     return model

@@ -37,18 +37,16 @@ def runExperiment():
     cfg['checkpoint_path'] = os.path.join(cfg['tag_path'], 'checkpoint')
     cfg['best_path'] = os.path.join(cfg['tag_path'], 'best')
     cfg['logger_path'] = os.path.join('output', 'logger', 'test', 'runs', cfg['tag'])
-    cfg['tokenizer_path'] = os.path.join(cfg['path'], 'tokenizer')
     cfg['result_path'] = os.path.join('output', 'result', cfg['tag'])
-    dataset = make_dataset(cfg['data_name'], cfg['target_mode'])
-    tokenizer = resume(os.path.join(cfg['tokenizer_path']))[cfg['data_name']]
-    dataset = process_dataset(dataset, tokenizer)
-    model = make_model(cfg['model'], tokenizer)
+    dataset = make_dataset(cfg['data_name'])
+    dataset = process_dataset(dataset)
+    model = make_model(cfg['model'])
     result = resume(cfg['best_path'])
     cfg['step'] = result['cfg']['step']
     model = model.to(cfg['device'])
     model.load_state_dict(result['model'])
     data_loader = make_data_loader(dataset, cfg[cfg['tag']]['optimizer']['batch_size'])
-    test_logger = make_logger(cfg['logger_path'], data_name=cfg['data_name'], target_mode=cfg['target_mode'])
+    test_logger = make_logger(cfg['logger_path'], data_name=cfg['data_name'])
     test(data_loader['test'], model, test_logger)
     result = resume(cfg['checkpoint_path'])
     result = {'cfg': cfg, 'logger': {'train': result['logger'],
