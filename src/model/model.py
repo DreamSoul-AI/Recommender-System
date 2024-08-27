@@ -15,7 +15,7 @@ def make_model(cfg):
 
 
 def make_loss(output, target):
-    loss = F.binary_cross_entropy(output.float(), target.float())
+    loss = F.binary_cross_entropy_with_logits(output.float(), target.float())
     return loss
 
 

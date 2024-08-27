@@ -10,7 +10,7 @@ if __name__ == "__main__":
     data_names = ['AmazonBeauty']
     cfg['seed'] = 0
     cfg['tag'] = 'make_dataset'
-    cfg['remake_stats'] = True
+    cfg['make_stats'] = True
     process_control()
     for data_name in data_names:
         dataset = make_dataset(data_name, transform=False)
@@ -21,4 +21,4 @@ if __name__ == "__main__":
         stats['max'] = max(rating)
         print(data_name, stats)
         makedir_exist_ok(stats_path)
-        save(stats, os.path.join(stats_path, '{}'.format(data_name)))
+        save(stats, os.path.join(stats_path, '{}'.format(data_name)), 'torch')
