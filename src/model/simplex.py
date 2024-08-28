@@ -4,18 +4,20 @@ import torch.nn.functional as F
 
 
 class SimpleX(nn.Module):
-    def __init__(self, num_users, num_items, hidden_size):
+    def __init__(self, num_users, num_items, hidden_size, aggregation_mode='mean'):
         super().__init__()
         self.num_users = num_users
         self.num_items = num_items
         self.hidden_size = hidden_size
+        self.aggregation_mode = aggregation_mode
         self.user_weight = nn.Embedding(self.num_users, self.hidden_size)
-        self.item_weight = nn.Embedding(self.num_items, self.hidden_size)
+        self.item_weight = nn.Embedding(self.num_items + 1, self.hidden_size)
         self.global_weight = nn.Parameter(torch.ones(1, ))
         self.user_bias = nn.Embedding(self.num_users, 1)
-        self.item_bias = nn.Embedding(self.num_items, 1)
+        self.item_bias = nn.Embedding(self.num_items + 1, 1)
         self.global_bias = nn.Parameter(torch.ones(1, ))
-        self.behavior_aggregation = BehaviorAggregator(hidden_size, gamma=0.5, aggregator='mean', dropout_rate=0.)
+        self.behavior_aggregation = BehaviorAggregator(hidden_size, gamma=0.5, aggregator=aggregation_mode,
+                                                       dropout_rate=0.)
         self.reset_parameters()
 
     def reset_parameters(self):
@@ -29,8 +31,10 @@ class SimpleX(nn.Module):
 
     def user_embedding(self, user, item_hist):
         user_embedding = self.user_weight(user) + self.user_bias(user)
-        print(item_hist)
+        mask = item_hist == -100
+        item_hist[mask] = self.num_items
         item_hist_embedding = self.item_embedding(item_hist)
+        item_hist_embedding[mask] = 0
         embedding = self.behavior_aggregation(user_embedding, item_hist_embedding)
         return embedding
 
@@ -72,6 +76,11 @@ class BehaviorAggregator(nn.Module):
             out = self.self_attention(sequence_emb)
         return self.gamma * uid_emb + (1 - self.gamma) * out
 
+    def average_pooling(self, sequence_emb):
+        mask = sequence_emb.sum(dim=-1) != 0
+        mean = sequence_emb.sum(dim=1) / (mask.float().sum(dim=-1, keepdim=True) + 1.e-9)
+        return self.W_v(mean)
+
     def user_attention(self, uid_emb, sequence_emb):
         key = self.W_k(sequence_emb)  # b x seq_len x attention_dim
         mask = sequence_emb.sum(dim=-1) == 0
@@ -92,11 +101,6 @@ class BehaviorAggregator(nn.Module):
         output = torch.bmm(attention.unsqueeze(1), sequence_emb).squeeze(1)
         return self.W_v(output)
 
-    def average_pooling(self, sequence_emb):
-        mask = sequence_emb.sum(dim=-1) != 0
-        mean = sequence_emb.sum(dim=1) / (mask.float().sum(dim=-1, keepdim=True) + 1.e-9)
-        return self.W_v(mean)
-
     def masked_softmax(self, X, mask):
         # use the following softmax to avoid nans when a sequence is entirely masked
         X = X.masked_fill_(mask, 0)
@@ -108,5 +112,6 @@ def simplex(cfg):
     num_users = cfg['stats']['num_users']
     num_items = cfg['stats']['num_items']
     hidden_size = cfg['simplex']['hidden_size']
-    model = SimpleX(num_users, num_items, hidden_size)
+    aggregation_mode = cfg['simplex']['aggregation_mode']
+    model = SimpleX(num_users, num_items, hidden_size, aggregation_mode)
     return model
