@@ -4,8 +4,9 @@ from .stats import make_stats
 
 def process_control():
     cfg['data_name'] = cfg['control']['data_name']
-    # cfg['target_mode'] = cfg['control']['target_mode']
     cfg['model_name'] = cfg['control']['model_name']
+    cfg['score_mode'] = cfg['control']['score_mode']
+    cfg['loss_mode'] = cfg['control']['loss_mode']
 
     batch_size = {'ML100K': 100, 'ML1M': 500, 'ML10M': 1000, 'ML20M': 1000, 'Douban': 100, 'AmazonBeauty': 1000}
     cfg['batch_size'] = batch_size[cfg['data_name']]
@@ -20,8 +21,9 @@ def process_control():
     cfg['max_length_mode'] = 'longest'
 
     cfg['model'] = {}
-    # cfg['model']['target_mode'] = cfg['target_mode']
     cfg['model']['model_name'] = cfg['model_name']
+    cfg['model']['score_mode'] = cfg['score_mode']
+    cfg['model']['loss_mode'] = cfg['loss_mode']
     cfg['model']['base'] = {}
     cfg['model']['mf'] = {'hidden_size': 256}
     cfg['model']['nmf'] = {'hidden_size': [256, 128]}

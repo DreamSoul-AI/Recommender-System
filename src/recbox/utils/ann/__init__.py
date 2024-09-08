@@ -1,4 +1,0 @@
-from .faiss import FaissIndex
-
-
-        

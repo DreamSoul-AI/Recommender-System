@@ -6,7 +6,7 @@ from torchinfo import summary
 from config import cfg, process_args
 from dataset import make_dataset, make_data_loader, process_dataset
 from model import make_model
-from module import save, resume, to_device, process_control
+from module import save, to_device, process_control
 
 cudnn.benchmark = True
 parser = argparse.ArgumentParser(description='cfg')
@@ -34,12 +34,10 @@ def runExperiment():
     torch.cuda.manual_seed(cfg['seed'])
     cfg['path'] = os.path.join('output', 'exp')
     cfg['tag_path'] = os.path.join(cfg['path'], cfg['tag'])
-    cfg['tokenizer_path'] = os.path.join(cfg['path'], 'tokenizer')
     dataset = make_dataset(cfg['data_name'])
-    cfg['iteration'] = 0
-    tokenizer = resume(os.path.join(cfg['tokenizer_path']))[cfg['data_name']]
-    dataset = process_dataset(dataset, tokenizer)
-    model = make_model(cfg['model'], tokenizer)
+    cfg['step'] = 0
+    dataset = process_dataset(dataset)
+    model = make_model(cfg['model'])
     model = model.to(cfg['device'])
     batch_size = {'train': 2, 'test': 2}
     data_loader = make_data_loader(dataset, batch_size)
@@ -48,7 +46,6 @@ def runExperiment():
     content = summary(model, input_data=[{'data': input['data']}], depth=50,
                       col_names=['input_size', 'output_size', 'num_params', 'params_percent', 'kernel_size',
                                  'mult_adds', 'trainable'])
-    print(content)
     save(content, os.path.join(cfg['tag_path'], 'summary'))
     return
 

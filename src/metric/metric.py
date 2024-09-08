@@ -1,9 +1,6 @@
 import torch
 import torch.nn.functional as F
 from collections import defaultdict
-from module import recur
-
-topk_ = 10
 
 
 def make_metric(split, **kwargs):
@@ -50,7 +47,7 @@ def _setup_matrix(output, target, user, item, attention_mask):
     return output_, target_
 
 
-def _get_topk_targets(output_, target_, topk=topk_):
+def _get_topk_targets(output_, target_, topk=10):
     topk = min(topk, target_.size(-1))
     _, indices = output_.topk(topk, dim=-1)
     return target_.take_along_dim(indices, dim=-1)
@@ -58,64 +55,6 @@ def _get_topk_targets(output_, target_, topk=topk_):
 
 def div_no_nan(a, b, na_value=0.):
     return (a / b).nan_to_num_(nan=na_value, posinf=na_value, neginf=na_value)
-
-
-def MAP(output, target, user, item, attention_mask, topk=topk_):
-    output_, target_ = _setup_matrix(output, target, user, item, attention_mask)
-    topk_target = _get_topk_targets(output_, target_, topk)
-    precision = torch.cumsum(topk_target, dim=-1) / torch.arange(1, topk + 1, device=output.device).float()
-    m = torch.sum(topk_target, dim=-1)
-    ap = (precision * topk_target).sum(dim=-1) / (m + 1e-10)
-    map = ap.mean().item()
-    return map
-
-
-def Precision(output, target, user, item, attention_mask, topk=topk_):
-    output_, target_ = _setup_matrix(output, target, user, item, attention_mask)
-    topk_target = _get_topk_targets(output_, target_, topk)
-    relevant_retrieved_items = torch.sum(topk_target, dim=-1)
-    precision = (relevant_retrieved_items / topk).mean().item()
-    return precision
-
-
-def Recall(output, target, user, item, attention_mask, topk=topk_):
-    output_, target_ = _setup_matrix(output, target, user, item, attention_mask)
-    topk_target = _get_topk_targets(output_, target_, topk)
-    relevant_items = torch.sum(target_, dim=-1)
-    relevant_retrieved_items = torch.sum(topk_target, dim=-1)
-    recall = (relevant_retrieved_items / (relevant_items + 1e-10)).mean().item()
-    return recall
-
-
-def F1(output, target, user, item, attention_mask, topk=topk_):
-    precision = Precision(output, target, user, item, attention_mask, topk)
-    recall = Recall(output, target, user, item, attention_mask, topk)
-    if precision + recall == 0:
-        return 0.0
-    f1 = 2 * (precision * recall) / (precision + recall)
-    return f1
-
-
-def HR(output, target, user, item, attention_mask, topk=topk_):
-    output_, target_ = _setup_matrix(output, target, user, item, attention_mask)
-    sorted_target = _get_topk_targets(output_, target_, topk)
-    hr = (sorted_target.float().sum(dim=-1) > 0).float().mean().item()
-    return hr
-
-
-def DCG(target):
-    batch_size, k = target.shape
-    rank_positions = torch.arange(1, k + 1, dtype=torch.float32, device=target.device).expand(batch_size, -1)
-    dcg = (target / torch.log2(rank_positions + 1)).sum(dim=-1)
-    return dcg
-
-
-def NDCG(output, target, user, item, attention_mask, topk=topk_):
-    output_, target_ = _setup_matrix(output, target, user, item, attention_mask)
-    sorted_target = _get_topk_targets(output_, target_, topk)
-    ideal_target, _ = target_.topk(topk, dim=-1)
-    ndcg = div_no_nan(DCG(sorted_target), DCG(ideal_target)).mean().item()
-    return ndcg
 
 
 class RMSE:
@@ -152,58 +91,12 @@ class Metric:
                     metric[split][m] = {'mode': 'batch', 'metric': (lambda input, output: output['loss'].item())}
                 elif m == 'Accuracy':
                     metric[split][m] = {'mode': 'batch',
-                                        'metric': (
-                                            lambda input, output: recur(Accuracy, output['target_rating'],
-                                                                        input['target_rating']))}
+                                        'metric': (lambda input, output: Accuracy(output['target'], input['target']))}
                 elif m == 'MSE':
                     metric[split][m] = {'mode': 'batch',
-                                        'metric': (
-                                            lambda input, output: recur(MSE, output['target_rating'],
-                                                                        input['target_rating']))}
+                                        'metric': (lambda input, output: MSE(output['target'], input['target']))}
                 elif m == 'RMSE':
                     metric[split][m] = {'mode': 'full', 'metric': RMSE()}
-                elif m == 'MAP':
-                    metric[split][m] = {'mode': 'batch',
-                                        'metric': (
-                                            lambda input, output: recur(MAP, output['target_rating'],
-                                                                        input['target_rating'], input['user'],
-                                                                        input['target_item'],
-                                                                        input['target_attention_mask']))}
-                elif m == 'Precision':
-                    metric[split][m] = {'mode': 'batch',
-                                        'metric': (
-                                            lambda input, output: recur(Precision, output['target_rating'],
-                                                                        input['target_rating'], input['user'],
-                                                                        input['target_item'],
-                                                                        input['target_attention_mask']))}
-                elif m == 'Recall':
-                    metric[split][m] = {'mode': 'batch',
-                                        'metric': (
-                                            lambda input, output: recur(Recall, output['target_rating'],
-                                                                        input['target_rating'], input['user'],
-                                                                        input['target_item'],
-                                                                        input['target_attention_mask']))}
-                elif m == 'F1':
-                    metric[split][m] = {'mode': 'batch',
-                                        'metric': (
-                                            lambda input, output: recur(F1, output['target_rating'],
-                                                                        input['target_rating'], input['user'],
-                                                                        input['target_item'],
-                                                                        input['target_attention_mask']))}
-                elif m == 'HR':
-                    metric[split][m] = {'mode': 'batch',
-                                        'metric': (
-                                            lambda input, output: recur(HR, output['target_rating'],
-                                                                        input['target_rating'], input['user'],
-                                                                        input['target_item'],
-                                                                        input['target_attention_mask']))}
-                elif m == 'NDCG':
-                    metric[split][m] = {'mode': 'batch',
-                                        'metric': (
-                                            lambda input, output: recur(NDCG, output['target_rating'],
-                                                                        input['target_rating'], input['user'],
-                                                                        input['target_item'],
-                                                                        input['target_attention_mask']))}
                 else:
                     raise ValueError('Not valid metric name')
         return metric
@@ -228,7 +121,7 @@ class Metric:
             compared = self.best < val
         else:
             raise ValueError('Not valid best direction')
-        if if_update:
+        if compared and if_update:
             self.best = val
         return compared
 

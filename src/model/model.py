@@ -5,18 +5,12 @@ import torch.optim as optim
 import model
 from .rs import rs
 from transformers import get_linear_schedule_with_warmup
-from config import cfg
 
 
 def make_model(cfg):
     base = eval('model.{}(cfg)'.format(cfg['model_name']))
     model = rs(base, cfg)
     return model
-
-
-def make_loss(output, target):
-    loss = F.binary_cross_entropy_with_logits(output.float(), target.float())
-    return loss
 
 
 def init_param(m):

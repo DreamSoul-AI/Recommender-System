@@ -1,9 +1,7 @@
 import numpy as np
 import os
 import torch
-import pandas as pd
 from torch.utils.data import Dataset
-from .utils import download_url
 from scipy.sparse import coo_matrix
 from datasets import load_dataset
 from module import check_exists, makedir_exist_ok, save, load

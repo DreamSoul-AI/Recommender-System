@@ -13,7 +13,6 @@ parser.add_argument('--num_experiments', default=1, type=int)
 parser.add_argument('--resume_mode', default=0, type=int)
 parser.add_argument('--split_round', default=65535, type=int)
 parser.add_argument('--mode', default=None, type=str)
-parser.add_argument('--dataset', default=None, type=str)
 args = vars(parser.parse_args())
 
 
@@ -37,35 +36,24 @@ def main():
     num_experiments = args['num_experiments']
     resume_mode = args['resume_mode']
     mode = args['mode']
-    dataset = args['dataset']
     split_round = args['split_round']
+    script_path = os.path.join('output', 'script')
     if num_gpus > 0:
         gpu_ids = [','.join(str(i) for i in list(range(x, x + 1))) for x in
                    list(range(init_gpu, init_gpu + num_gpus))]
     init_seeds = [list(range(init_seed, init_seed + num_experiments, experiment_step))]
     num_experiments = [[experiment_step]]
     resume_mode = [[resume_mode]]
+    filename = '{}_{}'.format(run, mode)
     if mode == 'base':
-        if run in ['train', 'test']:
-            filename = '{}_{}_{}'.format(run, mode, dataset)
-            script_name = [['{}_model.py'.format(run)]]
-            if dataset in ['ML100K', 'ML1M', 'ML10M', 'ML20M', 'Douban', 'Amazon']:
-                control_name = [[[dataset], ['base', 'mf', 'mlp', 'nmf', 'ae', 'simplex'], ['explicit', 'implicit']]]
-                controls = make_controls(script_name, init_seeds, num_experiments, resume_mode,
-                                         control_name)
-            else:
-                raise ValueError('Not valid data')
-        elif run == 'tokenize':
-            filename = '{}_{}'.format(run, dataset)
-            script_name = [['train_tokenizer.py']]
-            if dataset in ['ML100K', 'ML1M', 'ML10M', 'ML20M', 'Douban', 'Amazon']:
-                control_name = [[[dataset], ['base'], ['explicit']]]
-                controls = make_controls(script_name, init_seeds, num_experiments, resume_mode, control_name)
-            else:
-                raise ValueError('Not valid data')
-        else:
-            raise ValueError('Not valid run')
-
+        filename = '{}_{}'.format(run, mode)
+        script_name = [['{}_model.py'.format(run)]]
+        data_name = ['AmazonBeauty']
+        model_name = ['base', 'mf', 'simplex']
+        score_mode = ['cosine', 'userproj', 'itemproj', 'dot']
+        loss_mode = ['contrastive', 'mse', 'logistic', 'margin', 'bce', 'ce']
+        control_name = [[data_name, model_name, score_mode, loss_mode]]
+        controls = make_controls(script_name, init_seeds, num_experiments, resume_mode, control_name)
     else:
         raise ValueError('Not valid mode')
     s = '#!/bin/bash\n'
@@ -75,7 +63,8 @@ def main():
         controls[i] = list(controls[i])
         if num_gpus > 0:
             s = s + 'CUDA_VISIBLE_DEVICES=\"{}\" python {} --init_seed {} --num_experiments {} ' \
-                    '--resume_mode {} --control_name {}&\n'.format(gpu_ids[i % len(gpu_ids)], *controls[i])
+                    '--resume_mode {} --device cuda ' \
+                    '--control_name {}&\n'.format(gpu_ids[i % len(gpu_ids)], *controls[i])
         else:
             s = s + 'python {} --init_seed {} --num_experiments {} ' \
                     '--resume_mode {} --device cpu --control_name {}&\n'.format(*controls[i])
@@ -83,9 +72,9 @@ def main():
             s = s[:-2] + '\nwait\n'
             if j % split_round == 0:
                 print(s)
-                if not os.path.exists('scripts'):
-                    os.makedirs('scripts')
-                run_file = open(os.path.join('scripts', '{}_{}.sh'.format(filename, k)), 'w')
+                if not os.path.exists(script_path):
+                    os.makedirs(script_path)
+                run_file = open(os.path.join(script_path, '{}_{}.sh'.format(filename, k)), 'w')
                 run_file.write(s)
                 run_file.close()
                 s = '#!/bin/bash\n'
@@ -95,9 +84,9 @@ def main():
         if s[-5:-1] != 'wait':
             s = s + 'wait\n'
         print(s)
-        if not os.path.exists('scripts'):
-            os.makedirs('scripts')
-        run_file = open(os.path.join('scripts', '{}_{}.sh'.format(filename, k)), 'w')
+        if not os.path.exists(script_path):
+            os.makedirs(script_path)
+        run_file = open(os.path.join(script_path, '{}_{}.sh'.format(filename, k)), 'w')
         run_file.write(s)
         run_file.close()
     return

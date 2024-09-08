@@ -3,6 +3,8 @@
 control:
   data_name: AmazonBeauty
   model_name: simplex
+  score_mode: cosine
+  loss_mode: bce
 # experiment
 pin_memory: True
 num_workers: 0
