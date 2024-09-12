@@ -28,6 +28,9 @@ class RecommenderSystem(nn.Module):
             user_embedding = F.normalize(user_embedding, dim=-1)
         elif self.score_mode == 'itemproj':
             item_embedding = F.normalize(item_embedding, dim=-1)
+        elif self.score_mode == 'pearson':
+            user_embedding = F.normalize(user_embedding - user_embedding.mean(dim=-1, keepdims=True), dim=-1)
+            item_embedding = F.normalize(item_embedding - item_embedding.mean(dim=-1, keepdims=True), dim=-1)
         elif self.score_mode == 'dot':
             pass
         else:

@@ -50,7 +50,7 @@ def main():
         script_name = [['{}_model.py'.format(run)]]
         data_name = ['AmazonBeauty']
         model_name = ['base', 'mf', 'simplex']
-        score_mode = ['cosine', 'userproj', 'itemproj', 'dot']
+        score_mode = ['cosine', 'userproj', 'itemproj', 'pearson', 'dot']
         loss_mode = ['contrastive', 'mse', 'logistic', 'margin', 'bce', 'ce']
         control_name = [[data_name, model_name, score_mode, loss_mode]]
         controls = make_controls(script_name, init_seeds, num_experiments, resume_mode, control_name)
