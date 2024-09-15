@@ -14,6 +14,7 @@ class RecommenderSystem(nn.Module):
         self.loss_fn = make_loss_fn(loss_mode)
         self.global_weight = nn.Parameter(torch.ones(1, ))
         self.global_bias = nn.Parameter(torch.ones(1, ))
+        self.pad_token = self.base.num_items
 
     def reset_parameters(self):
         nn.init.normal_(self.global_weight, 0.0, 1e-4)
@@ -37,16 +38,20 @@ class RecommenderSystem(nn.Module):
             raise ValueError(f'score_mode {self.score_mode} not supported')
         output_rating = torch.bmm(item_embedding, user_embedding.unsqueeze(-1)).squeeze(-1)
         output_rating = self.global_weight * output_rating + self.global_bias
-        return output_rating
+        return output_rating, user_embedding, item_embedding
 
     def forward(self, input):
         output = {}
         user, item, rating, item_hist = input['user'], input['item'], input['rating'], input['item_hist']
         if self.model_name not in ['base']:
             user_embedding, item_embedding = self.base(user, item, rating, item_hist)
-            output_rating = self.make_score(user_embedding, item_embedding)
+            output_rating, user_embedding, item_embedding = self.make_score(user_embedding, item_embedding)
+            output['user_embedding'] = user_embedding
+            output['item_embedding'] = item_embedding
         else:
             output_rating = self.base(user, item, rating, item_hist)
+            output['user_embedding'] = None
+            output['item_embedding'] = None
         output_rating = self.global_weight * output_rating + self.global_bias
         output['rating'] = output_rating
         output['loss'] = self.loss_fn(output['rating'], rating)

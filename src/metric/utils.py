@@ -1,17 +1,28 @@
 import numpy as np
 import logging
-import heapq
-import itertools
-import os
 import multiprocessing as mp
-from tqdm import tqdm
-from ann import FaissIndex
+import faiss
 
 
-def evaluate_metrics(user_embs, 
-                     item_embs, 
-                     train_user2items, 
-                     valid_user2items, 
+class FaissIndex(object):
+    def __init__(self, corpus_vecs, dim, l2_normalize=False, index_name="IndexFlatIP"):
+        self.l2_normalize = l2_normalize
+        if self.l2_normalize:
+            faiss.normalize_L2(corpus_vecs)
+        self.index = faiss.IndexFlatIP(dim)
+        self.index.add(corpus_vecs.astype("float32"))
+
+    def search(self, query_vecs, topk=50):
+        if self.l2_normalize:
+            faiss.normalize_L2(query_vecs)
+        topk_scores, topk_indices = self.index.search(query_vecs.astype("float32"), topk)
+        return topk_scores, topk_indices
+
+
+def evaluate_metrics(user_embs,
+                     item_embs,
+                     train_user2items,
+                     valid_user2items,
                      query_indices,
                      metrics,
                      num_workers=1):
@@ -24,7 +35,7 @@ def evaluate_metrics(user_embs,
             max_topk = max(max_topk, int(metric.split("k=")[-1].strip(")")))
         except:
             raise NotImplementedError('metrics={} not implemented.'.format(metric))
-    
+
     faiss_index = FaissIndex(item_embs, dim=item_embs.shape[-1])
     chunk_size = min(1000, int(np.ceil(len(user_embs) / float(num_workers))))
     pool = mp.Pool(processes=num_workers)
@@ -33,11 +44,11 @@ def evaluate_metrics(user_embs,
         chunk_user_embs = user_embs[idx: (idx + chunk_size), :]
         chunk_query_indices = query_indices[idx: (idx + chunk_size)]
         if num_workers > 1:
-            results.append(pool.apply_async(evaluate_block, 
-                args=(chunk_user_embs, faiss_index, chunk_query_indices,
-                train_user2items, valid_user2items, metric_funcs, max_topk)))
+            results.append(pool.apply_async(evaluate_block,
+                                            args=(chunk_user_embs, faiss_index, chunk_query_indices,
+                                                  train_user2items, valid_user2items, metric_funcs, max_topk)))
         else:
-            results += evaluate_block(chunk_user_embs, faiss_index, chunk_query_indices, train_user2items, 
+            results += evaluate_block(chunk_user_embs, faiss_index, chunk_query_indices, train_user2items,
                                       valid_user2items, metric_funcs, max_topk)
     if num_workers > 1:
         pool.close()
@@ -49,7 +60,7 @@ def evaluate_metrics(user_embs,
     return return_dict
 
 
-def evaluate_block(user_embs, faiss_index, query_indices, train_user2items, 
+def evaluate_block(user_embs, faiss_index, query_indices, train_user2items,
                    valid_user2items, metric_funcs, max_topk):
     # set to topk=500 here since the retrieval results may contain clicked items
     scores, indices = faiss_index.search(user_embs, topk=500)
@@ -58,10 +69,10 @@ def evaluate_block(user_embs, faiss_index, query_indices, train_user2items,
     for i, query_index in enumerate(query_indices):
         train_items = train_user2items[query_index]
         mask[i, train_items] = 1
-    mask = np.take_along_axis(mask, indices, axis=1) # ie, mask[np.arange(len(mask))[:, None], indices]
+    mask = np.take_along_axis(mask, indices, axis=1)  # ie, mask[np.arange(len(mask))[:, None], indices]
     scores += -1e9 * mask
     sorted_idxs = np.argsort(-scores, axis=1)
-    topk_items = np.take_along_axis(indices, sorted_idxs, axis=1)[:, 0:max_topk] # get max_topk for metrics
+    topk_items = np.take_along_axis(indices, sorted_idxs, axis=1)[:, 0:max_topk]  # get max_topk for metrics
     true_items = [valid_user2items[query_index] for query_index in query_indices]
     chunk_results = [[func(preds, labels) for func in metric_funcs] \
                      for preds, labels in zip(topk_items, true_items)]
@@ -70,6 +81,7 @@ def evaluate_block(user_embs, faiss_index, query_indices, train_user2items,
 
 class Recall(object):
     """Recall metric."""
+
     def __init__(self, k=1):
         self.topk = k
 
@@ -82,6 +94,7 @@ class Recall(object):
 
 class nRecall(object):
     """Recall metric normalized with max 1 at topk, like nDCG"""
+
     def __init__(self, k=1):
         self.topk = k
 
@@ -94,6 +107,7 @@ class nRecall(object):
 
 class Precision(object):
     """Precision metric."""
+
     def __init__(self, k=1):
         self.topk = k
 
@@ -119,6 +133,7 @@ class F1(object):
 class DCG(object):
     """ Calculate discounted cumulative gain
     """
+
     def __init__(self, k=1):
         self.topk = k
 
@@ -134,6 +149,7 @@ class DCG(object):
 
 class NDCG(object):
     """Normalized discounted cumulative gain metric."""
+
     def __init__(self, k=1):
         self.topk = k
 
@@ -147,6 +163,7 @@ class NDCG(object):
 
 class MRR(object):
     """MRR metric"""
+
     def __init__(self, k=1):
         self.topk = k
 
@@ -175,6 +192,7 @@ class MAP(object):
     """
     Calculate mean average precision.
     """
+
     def __init__(self, k=1):
         self.topk = k
 
@@ -188,7 +206,3 @@ class MAP(object):
                 pos += 1
                 precision += pos / (i + 1.0)
         return precision / (pos + 1e-12)
-
-
-
-

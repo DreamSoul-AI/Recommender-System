@@ -3,7 +3,7 @@
 control:
   data_name: AmazonBeauty
   model_name: simplex
-  score_mode: pearson
+  score_mode: cosine
   loss_mode: bce
 # experiment
 pin_memory: True
