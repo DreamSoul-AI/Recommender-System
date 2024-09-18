@@ -7,7 +7,7 @@ from module import save, makedir_exist_ok, process_control
 if __name__ == "__main__":
     stats_path = os.path.join('output', 'stats')
     dim = 1
-    data_names = ['AmazonBeauty']
+    data_names = ['AmazonBeauty','Gowalla','Yelp18']
     cfg['seed'] = 0
     cfg['tag'] = 'make_dataset'
     cfg['make_stats'] = True
