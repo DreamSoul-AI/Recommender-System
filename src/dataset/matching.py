@@ -7,9 +7,9 @@ from datasets import load_dataset
 from module import check_exists, makedir_exist_ok, save, load
 
 
-class AmazonBeauty(Dataset):
-    data_name = 'AmazonBeauty'
-    hf_data_name = 'reczoo/AmazonBeauty_m1'
+class MatchingDataset(Dataset):
+    data_name = None
+    hf_data_name = None
 
     def __init__(self, root, split, transform=None):
         self.root = os.path.expanduser(root)
@@ -140,3 +140,27 @@ class AmazonBeauty(Dataset):
         dataset['test'] = coo_matrix((np.ones(len(test_users)), (test_users, test_items)),
                                      shape=(num_users, num_items))
         return dataset
+
+
+class AmazonBeauty(MatchingDataset):
+    data_name = 'AmazonBeauty'
+    hf_data_name = 'reczoo/AmazonBeauty_m1'
+
+    def __init__(self, root, split, transform=None):
+        super().__init__(root, split, transform)
+
+
+class Gowalla(MatchingDataset):
+    data_name = 'Gowalla'
+    hf_data_name = 'reczoo/Gowalla_m1'
+
+    def __init__(self, root, split, transform=None):
+        super().__init__(root, split, transform)
+
+
+class Yelp18(MatchingDataset):
+    data_name = 'Yelp18'
+    hf_data_name = 'reczoo/Yelp18_m1'
+
+    def __init__(self, root, split, transform=None):
+        super().__init__(root, split, transform)

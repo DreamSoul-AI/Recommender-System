@@ -11,7 +11,7 @@ def make_dataset(data_name, transform=True, verbose=True):
     if verbose:
         print('fetching data {}...'.format(data_name))
     root = './data/{}'.format(data_name)
-    if data_name in ['AmazonBeauty','Gowalla','Yelp18']:
+    if data_name in ['AmazonBeauty', 'Gowalla', 'Yelp18']:
         dataset_['train'] = eval('dataset.{}(root=root, split=\'train\')'.format(data_name))
         dataset_['test'] = eval('dataset.{}(root=root, split=\'test\')'.format(data_name))
         if transform:
