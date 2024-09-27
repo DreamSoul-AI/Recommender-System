@@ -16,13 +16,16 @@ def make_metric(split, **kwargs):
         best_metric_name = 'Loss'
         for k in metric_name:
             metric_name[k].extend(['Loss'])
-            if k == 'test':
+            if kwargs['run_mode'] == 'train' and k == 'test':
+                # metric_names = ['NDCG(k=20)', 'Recall(k=20)']
+                # metric_name['test'].extend(metric_names)
+                pass
+            elif kwargs['run_mode'] == 'test' and k == 'test':
                 # metric_names = ['F1(k=20)', 'Recall(k=20)', 'nRecall(k=50)',
                 #                 'Precision(k=20)', 'F1(k=10)', 'DCG(k=30)', 'NDCG(k=20)',
                 #                 'NDCG(k=50)', 'MRR(k=30)', 'HitRate(k=20)',
                 #                 'HitRate(k=50)', 'MAP(k=10)']
-                # metric_names = ['F1(k=20)']
-                metric_names = ['NDCG(k=20)', 'HitRate(k=20)']
+                metric_names = ['NDCG(k=20)', 'Recall(k=20)']
                 metric_name['test'].extend(metric_names)
     else:
         raise ValueError('Not valid data name')
@@ -166,7 +169,6 @@ class Metric:
             if self.metric[split][metric_name_i]['mode'] == mode:
                 if any(rs_metric_name in metric_name_i for rs_metric_name in self.rs_metric_names):
                     if metric_name_i == self.metric[split][metric_name_i]['metric'].metric_names[0]:
-                        print(metric_name_i)
                         rs_metric = self.metric[split][metric_name_i]['metric'](input, output)
                         for rs_metric_name_i in rs_metric:
                             evaluation[rs_metric_name_i] = rs_metric[rs_metric_name_i]
