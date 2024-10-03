@@ -28,7 +28,7 @@ class MatchingDataset(Dataset):
         item_hist_i = self.train_data_csr[user_i, :].indices
         item_hist_i = item_hist_i[item_hist_i != item[index]]
         item_hist_i = torch.tensor(item_hist_i, dtype=torch.long)
-        input = {'user': user_i, 'item': item_i, 'rating': rating_i, 'item_hist': item_hist_i}
+        input = {'user': user_i, 'item': item_i, 'target': rating_i, 'item_hist': item_hist_i}
         if self.transform is not None:
             input = self.transform(input)
         return input

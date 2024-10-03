@@ -36,25 +36,26 @@ class RecommenderSystem(nn.Module):
             pass
         else:
             raise ValueError(f'score_mode {self.score_mode} not supported')
+        if item_embedding.dim() == 2:
+            item_embedding = item_embedding.unsqueeze(1)
         output_rating = torch.bmm(item_embedding, user_embedding.unsqueeze(-1)).squeeze(-1)
         output_rating = self.global_weight * output_rating + self.global_bias
         return output_rating, user_embedding, item_embedding
 
     def forward(self, input):
         output = {}
-        user, item, rating, item_hist = input['user'], input['item'], input['rating'], input['item_hist']
+        user, item, target, item_hist = input['user'], input['item'], input['target'], input['item_hist']
         if self.model_name not in ['base']:
-            user_embedding, item_embedding = self.base(user, item, rating, item_hist)
-            output_rating, user_embedding, item_embedding = self.make_score(user_embedding, item_embedding)
+            user_embedding, item_embedding = self.base(user, item, target, item_hist)
+            pred, user_embedding, item_embedding = self.make_score(user_embedding, item_embedding)
             output['user_embedding'] = user_embedding
-            output['item_embedding'] = item_embedding
+            output['item_embedding'] = item_embedding[:, 0]
         else:
-            output_rating = self.base(user, item, rating, item_hist)
+            pred = self.base(user, item, target, item_hist)
             output['user_embedding'] = None
             output['item_embedding'] = None
-        output_rating = self.global_weight * output_rating + self.global_bias
-        output['rating'] = output_rating
-        output['loss'] = self.loss_fn(output['rating'], rating)
+        output['pred'] = self.global_weight * pred + self.global_bias
+        output['loss'] = self.loss_fn(output['pred'], target)
         return output
 
 

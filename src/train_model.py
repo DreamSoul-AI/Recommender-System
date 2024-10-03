@@ -138,7 +138,7 @@ def test(data_loader, model, logger):
             logger.append(evaluation, 'test', input_size)
             logger.add('test', input, output)
         evaluation = logger.evaluate('test', 'full')
-        logger.append(evaluation, 'test', input_size)
+        logger.append(evaluation, 'test')
         info = {'info': ['Model: {}'.format(cfg['tag']),
                          'Test Epoch: {}({:.0f}%)'.format(cfg['step'] // cfg['eval_period'], 100.)]}
         logger.append(info, 'test')

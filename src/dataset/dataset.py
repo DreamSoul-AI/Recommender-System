@@ -24,9 +24,7 @@ def make_dataset(data_name, transform=True, verbose=True):
                                                                             cfg['model']['num_negatives']),
                                                            Padding(cfg['model']['pad_token'],
                                                                    cfg['model']['max_length'])])
-            dataset_['test'].transform = dataset.Compose([NegativeSampling(cfg['model']['stats']['num_items'],
-                                                                           cfg['model']['num_negatives']),
-                                                          Padding(cfg['model']['pad_token'],
+            dataset_['test'].transform = dataset.Compose([Padding(cfg['model']['pad_token'],
                                                                   cfg['model']['max_length'])])
     else:
         raise ValueError('Not valid dataset name')
@@ -130,5 +128,5 @@ class NegativeSampling(torch.nn.Module):
             negatives = negatives[:self.num_negatives]
         negatives = negatives[:self.num_negatives]
         input['item'] = torch.cat([input['item'].view(-1), negatives])
-        input['rating'] = torch.cat([input['rating'].view(-1), input['rating'].new_zeros(len(negatives))])
+        input['target'] = torch.cat([input['target'].view(-1), input['target'].new_zeros(len(negatives))])
         return input

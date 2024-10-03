@@ -11,7 +11,7 @@ def process_control():
     batch_size = {'ML100K': 100, 'ML1M': 500, 'ML10M': 1000, 'ML20M': 1000, 'Douban': 100, 'AmazonBeauty': 1000}
     cfg['batch_size'] = batch_size[cfg['data_name']]
     cfg['step_period'] = 1
-    cfg['num_steps'] = 30
+    cfg['num_steps'] = 1
     cfg['eval_period'] = 30
     # cfg['num_epochs'] = 20
     if cfg['model_name'] == 'base':

@@ -11,14 +11,13 @@ def make_metric(split, **kwargs):
     data_name = kwargs['data_name']
     metric_name = {k: [] for k in split}
     if data_name in ['AmazonBeauty']:
-        best = float('inf')
         best_direction = 'down'
         best_metric_name = 'Loss'
         for k in metric_name:
             metric_name[k].extend(['Loss'])
             if kwargs['run_mode'] == 'train' and k == 'test':
-                # metric_names = ['NDCG(k=20)', 'Recall(k=20)']
-                # metric_name['test'].extend(metric_names)
+                metric_names = ['NDCG(k=20)', 'Recall(k=20)']
+                metric_name['test'].extend(metric_names)
                 pass
             elif kwargs['run_mode'] == 'test' and k == 'test':
                 # metric_names = ['F1(k=20)', 'Recall(k=20)', 'nRecall(k=50)',
@@ -30,46 +29,55 @@ def make_metric(split, **kwargs):
     else:
         raise ValueError('Not valid data name')
     pad_token = kwargs['pad_token']
-    metric = Metric(metric_name, best, best_direction, best_metric_name, pad_token=pad_token)
+    metric = Metric(metric_name, best_direction, best_metric_name, pad_token=pad_token)
     return metric
 
 
-def Accuracy(output, target, topk=1):
-    with torch.no_grad():
-        if target.dtype != torch.int64:
-            target = (target.topk(1, -1, True, True)[1]).view(-1)
-        batch_size = torch.numel(target)
-        pred_k = output.topk(topk, -1, True, True)[1]
-        correct_k = pred_k.eq(target.unsqueeze(-1).expand_as(pred_k)).float().sum()
-        acc = (correct_k * (100.0 / batch_size)).item()
-    return acc
-
-
-def MSE(output, target):
-    with torch.no_grad():
-        mse = F.mse_loss(output, target).item()
-    return mse
-
-
-class RMSE:
+class BaseMetric:
     def __init__(self):
-        self.reset()
+        super().__init__()
 
-    def reset(self):
-        self.se = 0
-        self.count = 0
-        return
+    def __call__(self, *args, **kwargs):
+        raise NotImplementedError
 
-    def add(self, input, output):
+
+class Loss(BaseMetric):
+    def __call__(self, loss):
         with torch.no_grad():
-            self.se += F.mse_loss(output['target_rating'], input['target_rating'], reduction='sum')
-            self.count += output['target_rating'].numel()
-        return
+            loss = loss.item()
+        return loss
 
-    def __call__(self, input, output):
+
+class Accuracy(BaseMetric):
+    def __init__(self, topk=1):
+        super().__init__()
+        self.topk = topk
+
+    def __call__(self, pred, target):
         with torch.no_grad():
-            rmse = ((self.se / self.count) ** 0.5).item()
-        self.reset()
+            if target.dtype != torch.int64:
+                target = (target.topk(1, -1, True, True)[1]).view(-1)
+            batch_size = torch.numel(target)
+            if pred.dtype != torch.int64:
+                pred_k = pred.topk(self.topk, -1, True, True)[1]
+                correct_k = pred_k.eq(target.unsqueeze(-1).expand_as(pred_k)).float().sum()
+            else:
+                correct_k = pred.eq(target).float().sum()
+            acc = (correct_k * (100.0 / batch_size)).item()
+        return acc
+
+
+class MSE(BaseMetric):
+    def __call__(self, pred, target):
+        with torch.no_grad():
+            mse = F.mse_loss(pred, target).item()
+        return mse
+
+
+class RMSE(BaseMetric):
+    def __call__(self, pred, target):
+        with torch.no_grad():
+            rmse = F.mse_loss(pred, target).sqrt().item()
         return rmse
 
 
@@ -77,103 +85,130 @@ class RS:
     def __init__(self, pad_token):
         self.metric_names = []
         self.pad_token = pad_token
-        self.reset()
-
-    def reset(self):
-        self.user_embs = None
-        self.item_embs = None
-        self.train_user2items = defaultdict(list)
-        self.valid_user2items = defaultdict(list)
-        self.query_indices = None
-        return
 
     def add_metric(self, metric_name):
         self.metric_names.append(metric_name)
         return
 
-    def add(self, input, output):
-        with torch.no_grad():
-            if output['user_embedding'] is not None:
-                if self.user_embs is None:
-                    self.user_embs = output['user_embedding']
-                else:
-                    self.user_embs = torch.cat([self.user_embs, output['user_embedding']])
-            if output['item_embedding'] is not None:
-                if self.item_embs is None:
-                    self.item_embs = output['item_embedding'][:, 0]
-                else:
-                    self.item_embs = torch.cat([self.item_embs, output['item_embedding'][:, 0]])
-            if self.query_indices is None:
-                self.query_indices = input['user']
-            else:
-                self.query_indices = torch.cat([self.query_indices, input['user']])
-            for i in range(len(input['user'])):
-                user_i = input['user'][i].item()
-                item_hist_i = input['item_hist'][i]
-                item_hist_i = item_hist_i[item_hist_i != self.pad_token].tolist()
-                self.train_user2items[user_i].extend(item_hist_i)
-                self.valid_user2items[user_i].append(input['item'][i][0].item())
-        return
-
     def __call__(self, input, output):
         with torch.no_grad():
             if len(self.metric_names) > 0:
-                rs = evaluate_metrics(self.user_embs.cpu().numpy(), self.item_embs.cpu().numpy(),
-                                      self.train_user2items, self.valid_user2items,
-                                      self.query_indices.cpu().numpy(), self.metric_names)
+                user_embedding = output['user_embedding'].cpu().numpy()
+                item_embedding = output['item_embedding'].cpu().numpy()
+                train_user2items = defaultdict(list)
+                valid_user2items = defaultdict(list)
+                for i in range(len(input['user'])):
+                    user_i = input['user'][i].item()
+                    item_hist_i = input['item_hist'][i]
+                    item_hist_i = item_hist_i[item_hist_i != self.pad_token].tolist()
+                    train_user2items[user_i].extend(item_hist_i)
+                    valid_user2items[user_i].append(input['item'][i].item())
+                query_indices = list(valid_user2items.keys())
+                rs = evaluate_metrics(user_embedding, item_embedding,
+                                      train_user2items, valid_user2items,
+                                      query_indices, self.metric_names)
             else:
                 rs = {}
-        self.reset()
         return rs
 
 
 class Metric:
-    def __init__(self, metric_name, best, best_direction, best_metric_name, **kwargs):
-        self.metric_name = metric_name
-        self.best, self.best_direction, self.best_metric_name = best, best_direction, best_metric_name
+    def __init__(self, metric_name, best_direction, best_metric_name, **kwargs):
         self.rs_metric_names = ['F1', 'Recall', 'nRecall', 'Precision', 'F1', 'DCG', 'NDCG', 'MRR', 'HitRate',
                                 'HitRate', 'MAP']
         self.rs = RS(kwargs['pad_token'])
-        self.metric = self.make_metric(metric_name, **kwargs)
+        self.metric_name = metric_name
+        self.best_direction, self.best_metric_name = best_direction, best_metric_name
+        self.metric, self.mode, self.mode_keys = self.make_metric(metric_name)
+        self.full_mode_keys = self.make_full_mode(self.mode, self.mode_keys)
+        self.reset()
 
-    def make_metric(self, metric_name, **kwargs):
-        metric = defaultdict(dict)
+    def make_metric(self, metric_name):
+        metric = {}
+        mode = {}
+        mode_keys = {}
         for split in metric_name:
-            for m in metric_name[split]:
-                if m == 'Loss':
-                    metric[split][m] = {'mode': 'batch', 'metric': (lambda input, output: output['loss'].item())}
-                elif m == 'Accuracy':
-                    metric[split][m] = {'mode': 'batch',
-                                        'metric': (lambda input, output: Accuracy(output['target'], input['target']))}
-                elif m == 'MSE':
-                    metric[split][m] = {'mode': 'batch',
-                                        'metric': (lambda input, output: MSE(output['target'], input['target']))}
-                elif m == 'RMSE':
-                    metric[split][m] = {'mode': 'full', 'metric': RMSE()}
-                elif any(rs_metric_name in m for rs_metric_name in self.rs_metric_names):
-                    self.rs.add_metric(m)
-                    metric[split][m] = {'mode': 'full', 'metric': self.rs}
+            metric[split] = {}
+            mode[split] = {}
+            mode_keys[split] = {}
+            for metric_name_i in metric_name[split]:
+                mode_keys[split][metric_name_i] = {'input': set(), 'output': set()}
+                if metric_name_i in ['Loss']:
+                    metric[split][metric_name_i] = eval('{}()'.format(metric_name_i))
+                    mode[split][metric_name_i] = 'batch'
+                    mode_keys[split][metric_name_i]['output'].add('loss')
+                elif metric_name_i in ['Accuracy', 'MSE']:
+                    metric[split][metric_name_i] = eval('{}()'.format(metric_name_i))
+                    mode[split][metric_name_i] = 'batch'
+                    mode_keys[split][metric_name_i]['input'].add('target')
+                    mode_keys[split][metric_name_i]['output'].add('pred')
+                elif any(rs_metric_name in metric_name_i for rs_metric_name in self.rs_metric_names):
+                    self.rs.add_metric(metric_name_i)
+                    mode[split][metric_name_i] = 'full'
+                    mode_keys[split][metric_name_i]['input'].update(['user', 'item', 'target', 'item_hist'])
+                    mode_keys[split][metric_name_i]['output'].update(['pred', 'user_embedding', 'item_embedding'])
                 else:
                     raise ValueError('Not valid metric name')
-        return metric
+        return metric, mode, mode_keys
+
+    def make_init_best(self):
+        if self.best_direction == 'up':
+            init_best = -float('inf')
+        elif self.best_direction == 'down':
+            init_best = float('inf')
+        else:
+            raise ValueError('Not valid best direction')
+        return init_best
+
+    def make_full_mode(self, mode, mode_keys):
+        full_mode_keys = {}
+        for split in mode:
+            full_mode_keys[split] = {'input': set(), 'output': set()}
+            for metric_name_i in mode[split]:
+                if mode[split][metric_name_i] == 'full':
+                    full_mode_keys[split]['input'].update(mode_keys[split][metric_name_i]['input'])
+                    full_mode_keys[split]['output'].update(mode_keys[split][metric_name_i]['output'])
+        return full_mode_keys
 
     def add(self, split, input, output):
-        for metric_name in self.metric_name[split]:
-            if self.metric[split][metric_name]['mode'] == 'full':
-                self.metric[split][metric_name]['metric'].add(input, output)
+        with torch.no_grad():
+            for key in self.full_mode_keys[split]['input']:
+                if key not in self.buffer['input']:
+                    self.buffer['input'][key] = input[key]
+                else:
+                    self.buffer['input'][key] = torch.cat([self.buffer['input'][key], input[key]], dim=0)
+            for key in self.full_mode_keys[split]['output']:
+                if key not in self.buffer['output']:
+                    self.buffer['output'][key] = output[key]
+                else:
+                    self.buffer['output'][key] = torch.cat([self.buffer['output'][key], output[key]], dim=0)
         return
 
-    def evaluate(self, split, mode, input, output, metric_name):
+    def evaluate(self, split, mode, input=None, output=None, metric_name=None):
+        metric_name = self.metric_name if metric_name is None else metric_name
         evaluation = {}
-        for metric_name_i in metric_name[split]:
-            if self.metric[split][metric_name_i]['mode'] == mode:
-                if any(rs_metric_name in metric_name_i for rs_metric_name in self.rs_metric_names):
-                    if metric_name_i == self.metric[split][metric_name_i]['metric'].metric_names[0]:
-                        rs_metric = self.metric[split][metric_name_i]['metric'](input, output)
-                        for rs_metric_name_i in rs_metric:
-                            evaluation[rs_metric_name_i] = rs_metric[rs_metric_name_i]
-                else:
-                    evaluation[metric_name_i] = self.metric[split][metric_name_i]['metric'](input, output)
+        if mode == 'batch':
+            for metric_name_i in metric_name[split]:
+                if self.mode[split][metric_name_i] == mode:
+                    input_ = {key: input[key] for key in self.mode_keys[split][metric_name_i]['input']}
+                    output_ = {key: output[key] for key in self.mode_keys[split][metric_name_i]['output']}
+                    evaluation[metric_name_i] = self.metric[split][metric_name_i](**input_, **output_)
+        elif mode == 'full':
+            for metric_name_i in metric_name[split]:
+                if self.mode[split][metric_name_i] == mode:
+                    input_ = {key: self.buffer['input'][key] for key in self.mode_keys[split][metric_name_i]['input']}
+                    output_ = {key: self.buffer['output'][key] for key in
+                               self.mode_keys[split][metric_name_i]['output']}
+                    if any(rs_metric_name in metric_name_i for rs_metric_name in self.rs_metric_names):
+                        if metric_name_i == self.rs.metric_names[0]:
+                            rs_metric = self.rs(input_, output_)
+                            for rs_metric_name_i in rs_metric:
+                                evaluation[rs_metric_name_i] = rs_metric[rs_metric_name_i]
+                    else:
+                        evaluation[metric_name_i] = self.metric[split][metric_name_i](**input_, **output_)
+            self.reset_buffer()
+        else:
+            raise ValueError('Not valid mode')
         return evaluation
 
     def compare(self, val, if_update):
@@ -187,11 +222,24 @@ class Metric:
             self.best = val
         return compared
 
+    def reset(self):
+        self.reset_best()
+        self.reset_buffer()
+        return
+
+    def reset_best(self):
+        self.best = self.make_init_best()
+        return
+
+    def reset_buffer(self):
+        self.buffer = {'input': {}, 'output': {}}
+        return
+
     def load_state_dict(self, state_dict):
-        self.best = state_dict['best']
         self.best_metric_name = state_dict['best_metric_name']
         self.best_direction = state_dict['best_direction']
+        self.reset_best()
         return
 
     def state_dict(self):
-        return {'best': self.best, 'best_metric_name': self.best_metric_name, 'best_direction': self.best_direction}
+        return {'best_metric_name': self.best_metric_name, 'best_direction': self.best_direction}
