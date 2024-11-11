@@ -29,6 +29,7 @@ def process_control():
     cfg['model']['nmf'] = {'hidden_size': [256, 128]}
     cfg['model']['ae'] = {'encoder_hidden_size': [256, 128], 'decoder_hidden_size': [128, 256]}
     cfg['model']['simplex'] = {'hidden_size': 256, 'aggregation_mode': 'mean'}
+    cfg['model']['gru4rec'] = {'hidden_size': 256}
     if 'make_stats' not in cfg:
         cfg['model']['stats'] = make_stats('{}'.format(cfg['data_name']))
     cfg['model']['num_negatives'] = 31
