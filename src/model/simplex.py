@@ -4,7 +4,8 @@ import torch.nn.functional as F
 
 
 class SimpleX(nn.Module):
-    def __init__(self, num_users, num_items, hidden_size, aggregation_mode='mean'):
+    def __init__(self, num_users, num_items, hidden_size, aggregation_mode='mean', gamma=0.5,
+                 attention_dropout=0., net_dropout=0.):
         super().__init__()
         self.num_users = num_users
         self.num_items = num_items
@@ -12,30 +13,28 @@ class SimpleX(nn.Module):
         self.aggregation_mode = aggregation_mode
         self.user_weight = nn.Embedding(self.num_users, self.hidden_size)
         self.item_weight = nn.Embedding(self.num_items + 1, self.hidden_size)
-        self.user_bias = nn.Embedding(self.num_users, 1)
-        self.item_bias = nn.Embedding(self.num_items + 1, 1)
-        self.behavior_aggregation = BehaviorAggregator(hidden_size, gamma=0.5, aggregator=aggregation_mode,
-                                                       dropout_rate=0.)
+        self.behavior_aggregation = BehaviorAggregator(hidden_size, aggregator=aggregation_mode, gamma=gamma,
+                                                       dropout_rate=attention_dropout)
+        self.dropout = nn.Dropout(p=net_dropout)
         self.reset_parameters()
 
     def reset_parameters(self):
         nn.init.normal_(self.user_weight.weight, 0.0, 1e-4)
         nn.init.normal_(self.item_weight.weight, 0.0, 1e-4)
-        nn.init.constant_(self.user_bias.weight, 0.0)
-        nn.init.constant_(self.item_bias.weight, 0.0)
         return
 
     def user_embedding(self, user, item_hist):
-        user_embedding = self.user_weight(user) + self.user_bias(user)
+        user_embedding = self.user_weight(user)
         mask = item_hist == -100
         item_hist[mask] = self.num_items
         item_hist_embedding = self.item_embedding(item_hist)
         item_hist_embedding[mask] = 0
-        embedding = self.behavior_aggregation(user_embedding, item_hist_embedding)
+        user_embedding = self.behavior_aggregation(user_embedding, item_hist_embedding)
+        embedding = self.dropout(user_embedding)
         return embedding
 
     def item_embedding(self, item):
-        embedding = self.item_weight(item) + self.item_bias(item)
+        embedding = self.item_weight(item)
         return embedding
 
     def forward(self, user, item, rating, item_hist):
@@ -105,5 +104,8 @@ def simplex(cfg):
     num_items = cfg['stats']['num_items']
     hidden_size = cfg['simplex']['hidden_size']
     aggregation_mode = cfg['simplex']['aggregation_mode']
-    model = SimpleX(num_users, num_items, hidden_size, aggregation_mode)
+    gamma = cfg['simplex']['gamma']
+    attention_dropout = cfg['simplex']['attention_dropout']
+    net_dropout = cfg['simplex']['net_dropout']
+    model = SimpleX(num_users, num_items, hidden_size, aggregation_mode, gamma, attention_dropout, net_dropout)
     return model

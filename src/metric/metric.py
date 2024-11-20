@@ -11,20 +11,21 @@ def make_metric(split, **kwargs):
     data_name = kwargs['data_name']
     metric_name = {k: [] for k in split}
     if data_name in ['AmazonBeauty']:
-        best_direction = 'down'
-        best_metric_name = 'Loss'
+        best_direction = 'up'
+        best_metric_name = 'Recall(k=20)'
         for k in metric_name:
             metric_name[k].extend(['Loss'])
             if kwargs['run_mode'] == 'train' and k == 'test':
-                metric_names = ['NDCG(k=20)', 'Recall(k=20)']
+                metric_names = ['Recall(k=20)']
                 metric_name['test'].extend(metric_names)
-                pass
             elif kwargs['run_mode'] == 'test' and k == 'test':
                 # metric_names = ['F1(k=20)', 'Recall(k=20)', 'nRecall(k=50)',
                 #                 'Precision(k=20)', 'F1(k=10)', 'DCG(k=30)', 'NDCG(k=20)',
                 #                 'NDCG(k=50)', 'MRR(k=30)', 'HitRate(k=20)',
                 #                 'HitRate(k=50)', 'MAP(k=10)']
-                metric_names = ['NDCG(k=20)', 'Recall(k=20)']
+                # metric_names = ['NDCG(k=20)', 'Recall(k=20)']
+                metric_names = ['Recall(k=20)', 'Recall(k=50)', 'NDCG(k=20)', 'NDCG(k=50)', 'HitRate(k=20)',
+                                'HitRate(k=50)']
                 metric_name['test'].extend(metric_names)
     else:
         raise ValueError('Not valid data name')

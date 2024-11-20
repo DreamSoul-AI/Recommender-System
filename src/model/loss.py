@@ -23,11 +23,14 @@ class ContrastiveLoss(nn.Module):
         pos_logits = y_pred[:, 0]
         pos_loss = torch.relu(1 - pos_logits)
         neg_logits = y_pred[:, 1:]
-        neg_loss = torch.relu(neg_logits - self._margin)
-        if self._negative_weight:
-            loss = pos_loss + neg_loss.mean(dim=-1) * self._negative_weight
+        if neg_logits.size(1) > 0:
+            neg_loss = torch.relu(neg_logits - self._margin)
+            if self._negative_weight:
+                loss = pos_loss + neg_loss.mean(dim=-1) * self._negative_weight
+            else:
+                loss = pos_loss + neg_loss.mean(dim=-1)
         else:
-            loss = pos_loss + neg_loss.mean(dim=-1)
+            loss = pos_loss
         return loss.mean()
 
 
@@ -113,15 +116,15 @@ class CrossEntropyLoss(nn.Module):
         return loss
 
 
-def make_loss_fn(loss_mode):
+def make_loss_fn(loss_mode, loss_kwargs):
     if loss_mode == 'contrastive':
-        loss_fn = ContrastiveLoss()
+        loss_fn = ContrastiveLoss(**loss_kwargs)
     elif loss_mode == 'mse':
         loss_fn = MSELoss()
     elif loss_mode == 'logistic':
         loss_fn = LogisticLoss()
     elif loss_mode == 'margin':
-        loss_fn = MarginLoss()
+        loss_fn = MarginLoss(**loss_kwargs)
     elif loss_mode == 'bce':
         loss_fn = BinaryCrossEntropyLoss()
     elif loss_mode == 'ce':

@@ -4,7 +4,7 @@ control:
   data_name: AmazonBeauty
   model_name: simplex
   score_mode: cosine
-  loss_mode: bce
+  loss_mode: contrastive
 # experiment
 pin_memory: True
 num_workers: 0
