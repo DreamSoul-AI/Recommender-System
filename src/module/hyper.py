@@ -13,7 +13,7 @@ def process_control():
     cfg['step_period'] = 1
     cfg['num_steps'] = 1
     cfg['eval_period'] = 30
-    cfg['num_epochs'] = 1
+    cfg['num_epochs'] = 100
     if cfg['model_name'] == 'base':
         cfg['num_epochs'] = 1
     cfg['collate_mode'] = 'dict'

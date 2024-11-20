@@ -16,7 +16,7 @@ def make_metric(split, **kwargs):
         for k in metric_name:
             metric_name[k].extend(['Loss'])
             if kwargs['run_mode'] == 'train' and k == 'test':
-                metric_names = ['Recall(k=20)']
+                metric_names = ['Recall(k=20)', 'NDCG(k=20)']
                 metric_name['test'].extend(metric_names)
             elif kwargs['run_mode'] == 'test' and k == 'test':
                 # metric_names = ['F1(k=20)', 'Recall(k=20)', 'nRecall(k=50)',
