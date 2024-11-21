@@ -31,6 +31,7 @@ def process_control():
     cfg['model']['simplex'] = {'hidden_size': 64, 'aggregation_mode': 'mean', 'gamma': 1, 'attention_dropout': 0.,
                                'net_dropout': 0.}
     cfg['model']['gru4rec'] = {'hidden_size': 256}
+    cfg['model']['youtubednn'] = {'hidden_size': 256}
     if 'make_stats' not in cfg:
         cfg['model']['stats'] = make_stats('{}'.format(cfg['data_name']))
     cfg['model']['num_negatives'] = 1000

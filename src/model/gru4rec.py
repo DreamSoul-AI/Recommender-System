@@ -18,14 +18,13 @@ class GRU4Rec(nn.Module):
         self.num_layers = num_layers
 
         # Increase num_items by 1 to include a padding index
-        self.num_items = num_items + 1  # Add 1 for the padding index
+        self.num_items = num_items   # Add 1 for the padding index
         self.padding_idx = num_items    # Padding index is set to the last index
 
         # Embedding layers for users and items
         self.user_embedding_layer = nn.Embedding(num_users, hidden_size)
         self.item_embedding_layer = nn.Embedding(
-            self.num_items, hidden_size, padding_idx=self.padding_idx
-        )
+            self.num_items+1, hidden_size)
         
         self.user_mlp = nn.Sequential(
                 nn.Linear(self.hidden_size*2, self.hidden_size),
@@ -83,13 +82,13 @@ class GRU4Rec(nn.Module):
 
         user_emb = self.user_embedding(user_ids, item_history)
         item_emb = self.item_embedding(item_ids)
-        pdb.set_trace()
+        
         return user_emb, item_emb
 
 def gru4rec(cfg):
     num_users = cfg['stats']['num_users']
     num_items = cfg['stats']['num_items']
-    hidden_size = cfg['mf']['hidden_size']
+    hidden_size = cfg['gru4rec']['hidden_size']
     num_layers = 2
     model = GRU4Rec(num_users, num_items, hidden_size, num_layers)
     return model
