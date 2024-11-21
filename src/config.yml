@@ -2,7 +2,7 @@
 # control
 control:
   data_name: AmazonBeauty
-  model_name: gru4rec
+  model_name: youtubednn
   score_mode: cosine
   loss_mode: bce
 # experiment
