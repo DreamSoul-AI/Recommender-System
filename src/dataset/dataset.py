@@ -96,9 +96,9 @@ def process_dataset(dataset):
 
 
 class Padding(torch.nn.Module):
-    def __init__(self, pad_id, max_length):
+    def __init__(self, pad_token, max_length):
         super().__init__()
-        self.pad_id = pad_id
+        self.pad_token = pad_token
         self.max_length = max_length
 
     def forward(self, input):
@@ -107,7 +107,7 @@ class Padding(torch.nn.Module):
         else:
             pad_length = self.max_length - len(input['item_hist'])
             input['item_hist'] = torch.cat(
-                [input['item_hist'], input['item_hist'].new_tensor([self.pad_id] * pad_length)])
+                [input['item_hist'], input['item_hist'].new_tensor([self.pad_token] * pad_length)])
         return input
 
 

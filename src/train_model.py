@@ -102,6 +102,7 @@ def train(data_loader, model, optimizer, scheduler, logger):
                     optimizer.step()
                     scheduler.step()
                     optimizer.zero_grad()
+            # break
             evaluation = logger.evaluate('train', 'batch', input, output)
             logger.append(evaluation, 'train', n=input_size)
             idx = cfg['step'] % cfg['eval_period']

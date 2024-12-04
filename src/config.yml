@@ -2,8 +2,8 @@
 # control
 control:
   data_name: AmazonBeauty
-  model_name: youtubednn
-  score_mode: cosine
+  model_name: simplex
+  embedding_mode: cosine
   loss_mode: contrastive
 # experiment
 pin_memory: True

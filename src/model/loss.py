@@ -116,15 +116,15 @@ class CrossEntropyLoss(nn.Module):
         return loss
 
 
-def make_loss_fn(loss_mode, loss_kwargs):
+def make_loss_fn(loss_mode, loss_hyperparam):
     if loss_mode == 'contrastive':
-        loss_fn = ContrastiveLoss(**loss_kwargs)
+        loss_fn = ContrastiveLoss(**loss_hyperparam)
     elif loss_mode == 'mse':
         loss_fn = MSELoss()
     elif loss_mode == 'logistic':
         loss_fn = LogisticLoss()
     elif loss_mode == 'margin':
-        loss_fn = MarginLoss(**loss_kwargs)
+        loss_fn = MarginLoss(**loss_hyperparam)
     elif loss_mode == 'bce':
         loss_fn = BinaryCrossEntropyLoss()
     elif loss_mode == 'ce':
