@@ -12,37 +12,26 @@ class RecommenderSystem(nn.Module):
         self.loss_mode = loss_mode
         self.loss_fn = make_loss_fn(loss_mode, loss_kwargs['loss_hyperparam'])
         self.pad_token = pad_token
-        # self.enable_bias = enable_bias
-        # if self.enable_bias:
-        #     self.user_bias = nn.Embedding(self.num_users, 1)
-        #     self.item_bias = nn.Embedding(self.num_items + 1, 1)
 
-    # def reset_parameters(self):
-    #     nn.init.normal_(self.global_weight, 0.0, 1e-4)
-    #     if self.enable_bias:
-    #         nn.init.constant_(self.user_bias.weight, 0.0)
-    #         nn.init.constant_(self.item_bias.weight, 0.0)
-    #         nn.init.constant_(self.global_bias, 0.0)
-    #     return
+    @property
+    def num_users(self):
+        return self.base.num_users
+
+    @property
+    def num_items(self):
+        return self.base.num_items
 
     def forward(self, input):
         output = {}
         user, item, target, item_hist = input['user'], input['item'], input['target'], input['item_hist']
         if self.model_name not in ['base']:
             pred, user_embedding, item_embedding = self.base(user, item, target, item_hist)
-            # pred, user_embedding, item_embedding = self.make_score(user_embedding, item_embedding)
-            # if self.enable_bias:
-            #     user_embedding = torch.cat([user_embedding, user_embedding.new_ones(user_embedding.size(0), 1)], dim=-1)
-            #     item_embedding = torch.cat([item_embedding, self.item_bias(item)], dim=-1)
             output['user_embedding'] = user_embedding
             output['item_embedding'] = item_embedding[:, 0]
         else:
             pred = self.base(user, item, target, item_hist)
             output['user_embedding'] = None
             output['item_embedding'] = None
-        # pred = self.global_weight * pred
-        # if self.enable_bias:
-        #     pred += self.user_bias(user) + self.global_bias
         output['pred'] = pred
         output['loss'] = self.loss_fn(output['pred'], target)
         return output

@@ -123,7 +123,7 @@ class MatchingDataset(Dataset):
             if user_token in user_token_to_index:
                 user_index = user_token_to_index[user_token]
             else:
-                break
+                continue
 
             for item_token in item_tokens:
                 if item_token in item_token_to_index:

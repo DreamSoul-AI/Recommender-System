@@ -24,13 +24,6 @@ class SimpleX(nn.Module):
             self.item_bias = nn.Embedding(self.num_items + 1, 1, padding_idx=self.num_items)
             self.global_bias = nn.Parameter(torch.zeros(1, ))
 
-    #     self.reset_parameters()
-    #
-    # def reset_parameters(self):
-    #     nn.init.normal_(self.user_weight.weight, 0.0, 1e-4)
-    #     nn.init.normal_(self.item_weight.weight, 0.0, 1e-4)
-    #     return
-
     def user_embedding(self, user, item_hist):
         user_embedding = self.user_weight(user)
         item_hist_embedding = self.item_weight(item_hist)
@@ -54,11 +47,6 @@ class SimpleX(nn.Module):
         item_embedding = self.item_embedding(item)
         if item_embedding.dim() == 2:
             item_embedding = item_embedding.unsqueeze(1)
-        # y_pred = torch.bmm(item_vecs.view(user_vecs.size(0), self.num_negs + 1, -1),
-        #                    user_vecs.unsqueeze(-1)).squeeze(-1)
-        # if self.enable_bias: # user_bias and global_bias only influence training, but not inference for ranking
-        #     y_pred += self.user_bias(self.to_device(user_dict)) + self.global_bias
-        # loss = self.get_total_loss(y_pred, labels)
         output_rating = torch.bmm(item_embedding, user_embedding.unsqueeze(-1)).squeeze(-1)
         if self.enable_bias:  # user_bias and global_bias only influence training, but not inference for ranking
             output_rating = self.user_bias(user) + self.global_bias
@@ -125,10 +113,5 @@ def simplex(cfg):
     num_users = cfg['stats']['num_users']
     num_items = cfg['stats']['num_items']
     embedding_mode = cfg['embedding_mode']
-    # hidden_size = cfg['simplex']['hidden_size']
-    # aggregation_mode = cfg['simplex']['aggregation_mode']
-    # gamma = cfg['simplex']['gamma']
-    # attention_dropout = cfg['simplex']['attention_dropout']
-    # net_dropout = cfg['simplex']['net_dropout']
     model = SimpleX(num_users, num_items, embedding_mode, **cfg['simplex'])
     return model

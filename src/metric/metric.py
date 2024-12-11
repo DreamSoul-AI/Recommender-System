@@ -1,5 +1,5 @@
 import os
-
+import numpy as np
 os.environ["KMP_DUPLICATE_LIB_OK"] = "TRUE"
 import torch
 import torch.nn.functional as F
@@ -29,8 +29,8 @@ def make_metric(split, **kwargs):
                 metric_name['test'].extend(metric_names)
     else:
         raise ValueError('Not valid data name')
-    pad_token = kwargs['pad_token']
-    metric = Metric(metric_name, best_direction, best_metric_name, pad_token=pad_token)
+    metric = Metric(metric_name, best_direction, best_metric_name,
+                    num_users=kwargs['num_users'], num_items=kwargs['num_items'])
     return metric
 
 
@@ -83,9 +83,10 @@ class RMSE(BaseMetric):
 
 
 class RS:
-    def __init__(self, pad_token):
+    def __init__(self, num_users, num_items):
         self.metric_names = []
-        self.pad_token = pad_token
+        self.num_users = num_users
+        self.num_items = num_items
 
     def add_metric(self, metric_name):
         self.metric_names.append(metric_name)
@@ -94,30 +95,60 @@ class RS:
     def __call__(self, input, output):
         with torch.no_grad():
             if len(self.metric_names) > 0:
-                user_embedding = output['user_embedding'].cpu().numpy()
-                item_embedding = output['item_embedding'].cpu().numpy()
+                user_embedding = output['user_embedding'].cpu().numpy().astype(np.float64) # TODO: this is wrong should loop item embedding separately
+                item_embedding = output['item_embedding'].cpu().numpy().astype(np.float64)
                 train_user2items = defaultdict(list)
                 valid_user2items = defaultdict(list)
                 for i in range(len(input['user'])):
                     user_i = input['user'][i].item()
                     item_hist_i = input['item_hist'][i]
-                    item_hist_i = item_hist_i[item_hist_i != self.pad_token].tolist()
+                    item_hist_i = item_hist_i[item_hist_i != self.num_items].tolist() # TODO: should only run only once
                     train_user2items[user_i].extend(item_hist_i)
                     valid_user2items[user_i].append(input['item'][i].item())
                 query_indices = list(valid_user2items.keys())
+                # print(user_embedding.shape)
+                # print(item_embedding.shape)
+                # print(user_embedding)
+                # print(item_embedding)
+                # print(train_user2items)
+                # print(valid_user2items)
+                # print(query_indices)
                 rs = evaluate_metrics(user_embedding, item_embedding,
                                       train_user2items, valid_user2items,
                                       query_indices, self.metric_names)
+                print(rs)
             else:
                 rs = {}
         return rs
+
+# def evaluate(self, train_generator, valid_generator):
+#     logging.info("Start evaluation...")
+#     self.eval()  # set to evaluation mode
+#     with torch.no_grad():
+#         user_vecs = []
+#         item_vecs = []
+#         for user_batch in valid_generator.user_loader:
+#             user_vec = self.user_tower(user_batch)
+#             user_vecs.extend(user_vec.data.cpu().numpy())
+#         for item_batch in valid_generator.item_loader:
+#             item_vec = self.item_tower(item_batch)
+#             item_vecs.extend(item_vec.data.cpu().numpy())
+#         user_vecs = np.array(user_vecs, np.float64)
+#         item_vecs = np.array(item_vecs, np.float64)
+#         val_logs = evaluate_metrics(user_vecs,
+#                                     item_vecs,
+#                                     train_generator.user2items_dict,
+#                                     valid_generator.user2items_dict,
+#                                     valid_generator.query_indexes,
+#                                     self._validation_metrics)
+#         return val_logs
 
 
 class Metric:
     def __init__(self, metric_name, best_direction, best_metric_name, **kwargs):
         self.rs_metric_names = ['F1', 'Recall', 'nRecall', 'Precision', 'F1', 'DCG', 'NDCG', 'MRR', 'HitRate',
                                 'HitRate', 'MAP']
-        self.rs = RS(kwargs['pad_token'])
+        self.rs = RS(kwargs['num_users'], kwargs['num_items'])
         self.metric_name = metric_name
         self.best_direction, self.best_metric_name = best_direction, best_metric_name
         self.metric, self.mode, self.mode_keys = self.make_metric(metric_name)

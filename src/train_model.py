@@ -52,14 +52,14 @@ def runExperiment():
         optimizer = make_optimizer(model.parameters(), cfg[cfg['tag']]['optimizer'])
         scheduler = make_scheduler(optimizer, cfg[cfg['tag']]['optimizer'])
         logger = make_logger(cfg['logger_path'], data_name=cfg['data_name'], run_mode=cfg['run_mode'],
-                             pad_token=model.pad_token)
+                             num_users=model.num_users, num_items=model.num_items)
     else:
         cfg['step'] = result['cfg']['step']
         model = model.to(cfg['device'])
         optimizer = make_optimizer(model.parameters(), cfg[cfg['tag']]['optimizer'])
         scheduler = make_scheduler(optimizer, cfg[cfg['tag']]['optimizer'])
         logger = make_logger(cfg['logger_path'], data_name=cfg['data_name'], run_mode=cfg['run_mode'],
-                             pad_token=model.pad_toke)
+                             num_users=model.num_users, num_items=model.num_items)
         model.load_state_dict(result['model'])
         optimizer.load_state_dict(result['optimizer'])
         scheduler.load_state_dict(result['scheduler'])
