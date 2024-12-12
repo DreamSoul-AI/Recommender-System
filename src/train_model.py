@@ -5,6 +5,7 @@ import shutil
 import time
 import torch
 import torch.backends.cudnn as cudnn
+from collections import defaultdict
 from config import cfg, process_args
 from dataset import make_dataset, make_data_loader, process_dataset
 from metric import make_logger
@@ -45,6 +46,7 @@ def runExperiment():
     dataset = make_dataset(cfg['data_name'])
     dataset = process_dataset(dataset)
     model = make_model(cfg['model'])
+    train_user2items, valid_user2items = make_user2items(dataset)  # TODO: should store in dataset in device
     result = resume(cfg['checkpoint_path'], resume_mode=cfg['resume_mode'])
     if result is None:
         cfg['step'] = 0
@@ -52,14 +54,16 @@ def runExperiment():
         optimizer = make_optimizer(model.parameters(), cfg[cfg['tag']]['optimizer'])
         scheduler = make_scheduler(optimizer, cfg[cfg['tag']]['optimizer'])
         logger = make_logger(cfg['logger_path'], data_name=cfg['data_name'], run_mode=cfg['run_mode'],
-                             num_users=model.num_users, num_items=model.num_items)
+                             num_users=model.num_users, num_items=model.num_items,
+                             train_user2items=train_user2items, valid_user2items=valid_user2items)
     else:
         cfg['step'] = result['cfg']['step']
         model = model.to(cfg['device'])
         optimizer = make_optimizer(model.parameters(), cfg[cfg['tag']]['optimizer'])
         scheduler = make_scheduler(optimizer, cfg[cfg['tag']]['optimizer'])
         logger = make_logger(cfg['logger_path'], data_name=cfg['data_name'], run_mode=cfg['run_mode'],
-                             num_users=model.num_users, num_items=model.num_items)
+                             num_users=model.num_users, num_items=model.num_items,
+                             train_user2items=train_user2items, valid_user2items=valid_user2items)
         model.load_state_dict(result['model'])
         optimizer.load_state_dict(result['optimizer'])
         scheduler.load_state_dict(result['scheduler'])
@@ -74,7 +78,7 @@ def runExperiment():
     data_iterator = enumerate(data_loader['train'])
     while cfg['step'] < cfg['num_steps']:
         train(data_iterator, model, optimizer, scheduler, logger)
-        test(data_loader['test'], model, logger)
+        test(dataset, model, logger)
         result = {'cfg': cfg, 'model': model.state_dict(),
                   'optimizer': optimizer.state_dict(), 'scheduler': scheduler.state_dict(),
                   'logger': logger.state_dict()}
@@ -102,7 +106,7 @@ def train(data_loader, model, optimizer, scheduler, logger):
                     optimizer.step()
                     scheduler.step()
                     optimizer.zero_grad()
-            # break
+            break
             evaluation = logger.evaluate('train', 'batch', input, output)
             logger.append(evaluation, 'train', n=input_size)
             idx = cfg['step'] % cfg['eval_period']
@@ -128,23 +132,52 @@ def train(data_loader, model, optimizer, scheduler, logger):
     return
 
 
-def test(data_loader, model, logger):
+def make_user2items(dataset):
+    data_loader = make_data_loader(dataset, cfg[cfg['tag']]['optimizer']['batch_size'])
+    train_user2items = defaultdict(list)
+    for i, input in enumerate(data_loader['train']): # TODO this should be set in the beginning
+        for j in range(len(input['user'])):
+            user_i_j = input['user'][j].item()
+            item_hist_i_j = input['item_hist'][j]
+            item_hist_i_j = item_hist_i_j[item_hist_i_j != -100].tolist()
+            train_user2items[user_i_j].extend(item_hist_i_j)
+    valid_user2items = defaultdict(list)
+    for i, input in enumerate(data_loader['test']):
+        for j in range(len(input['user'])):
+            user_i_j = input['user'][j].item()
+            valid_user2items[user_i_j].append(input['item'][j].item())
+    return train_user2items, valid_user2items
+
+
+def test(dataset, model, logger):
+    data_loader = make_data_loader(dataset, cfg[cfg['tag']]['optimizer']['batch_size'], shuffle=False)
     with torch.no_grad():
         model.train(False)
-        for i, input in enumerate(data_loader):
-            input_size = input['user'].size(0)
+
+        user_embedding = []
+        for i, input in enumerate(data_loader['train']):
             input = to_device(input, cfg['device'])
-            output = model(input)
-            evaluation = logger.evaluate('test', 'batch', input, output)
-            logger.append(evaluation, 'test', input_size)
-            logger.add('test', input, output)
-        evaluation = logger.evaluate('test', 'full')
-        logger.append(evaluation, 'test')
-        info = {'info': ['Model: {}'.format(cfg['tag']),
-                         'Test Epoch: {}({:.0f}%)'.format(cfg['step'] // cfg['eval_period'], 100.)]}
-        logger.append(info, 'test')
-        print(logger.write('test'))
-        logger.save(True)
+            print(i, input['user'])
+            user_embedding_i = model.user_embedding(input)
+            user_embedding.append(user_embedding_i)
+        exit()
+        item_embedding = []
+        for i in range(0, dataset['train'].num_items, cfg[cfg['tag']]['optimizer']['batch_size']['test']):
+            item = torch.arange(i, i + cfg[cfg['tag']]['optimizer']['batch_size']['test'])
+            input = {'item': item}
+            item_embedding_i = model.user_embedding(input)
+            item_embedding.append(item_embedding_i)
+
+        #     evaluation = logger.evaluate('test', 'batch', input, output)
+        #     logger.append(evaluation, 'test', input_size)
+        #     logger.add('test', input, output)
+        # evaluation = logger.evaluate('test', 'full')
+        # logger.append(evaluation, 'test')
+        # info = {'info': ['Model: {}'.format(cfg['tag']),
+        #                  'Test Epoch: {}({:.0f}%)'.format(cfg['step'] // cfg['eval_period'], 100.)]}
+        # logger.append(info, 'test')
+        # print(logger.write('test'))
+        # logger.save(True)
     return
 
 

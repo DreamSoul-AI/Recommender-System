@@ -20,7 +20,7 @@ class MatchingDataset(Dataset):
         self.data, self.meta = load(os.path.join(self.processed_folder, 'data'), mode='pickle')
         self.train_data_csr = self.data['train'].tocsr()
 
-    def __getitem__(self, index):
+    def __getitem__(self, index): ## TODO: change add per user and per item looping
         user, item, rating = self.data[self.split].row, self.data[self.split].col, self.data[self.split].data
         user_i = torch.tensor(user[index], dtype=torch.long)
         item_i = torch.tensor(item[index], dtype=torch.long)

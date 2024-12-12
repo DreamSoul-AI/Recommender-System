@@ -41,8 +41,9 @@ class SimpleX(nn.Module):
         return item_embedding
 
     def forward(self, user, item, rating, item_hist):
-        item_hist[item_hist == -100] = self.num_items
-        user_embedding = self.user_embedding(user, item_hist)
+        item_hist_ = item_hist.clone()
+        item_hist_[item_hist_ == -100] = self.num_items
+        user_embedding = self.user_embedding(user, item_hist_)
         user_embedding = self.dropout(user_embedding)
         item_embedding = self.item_embedding(item)
         if item_embedding.dim() == 2:

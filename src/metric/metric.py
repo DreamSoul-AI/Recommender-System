@@ -3,7 +3,6 @@ import numpy as np
 os.environ["KMP_DUPLICATE_LIB_OK"] = "TRUE"
 import torch
 import torch.nn.functional as F
-from collections import defaultdict
 from .utils import evaluate_metrics
 
 
@@ -30,7 +29,8 @@ def make_metric(split, **kwargs):
     else:
         raise ValueError('Not valid data name')
     metric = Metric(metric_name, best_direction, best_metric_name,
-                    num_users=kwargs['num_users'], num_items=kwargs['num_items'])
+                    num_users=kwargs['num_users'], num_items=kwargs['num_items'],
+                    train_user2items=kwargs['train_user2items'], valid_user2items=kwargs['valid_user2items'])
     return metric
 
 
@@ -83,10 +83,13 @@ class RMSE(BaseMetric):
 
 
 class RS:
-    def __init__(self, num_users, num_items):
+    def __init__(self, num_users, num_items, train_user2items, valid_user2items):
         self.metric_names = []
         self.num_users = num_users
         self.num_items = num_items
+        self.train_user2items = train_user2items
+        self.valid_user2items = valid_user2items
+        self.query_indices = list(range(self.num_users))
 
     def add_metric(self, metric_name):
         self.metric_names.append(metric_name)
@@ -97,25 +100,18 @@ class RS:
             if len(self.metric_names) > 0:
                 user_embedding = output['user_embedding'].cpu().numpy().astype(np.float64) # TODO: this is wrong should loop item embedding separately
                 item_embedding = output['item_embedding'].cpu().numpy().astype(np.float64)
-                train_user2items = defaultdict(list)
-                valid_user2items = defaultdict(list)
-                for i in range(len(input['user'])):
-                    user_i = input['user'][i].item()
-                    item_hist_i = input['item_hist'][i]
-                    item_hist_i = item_hist_i[item_hist_i != self.num_items].tolist() # TODO: should only run only once
-                    train_user2items[user_i].extend(item_hist_i)
-                    valid_user2items[user_i].append(input['item'][i].item())
-                query_indices = list(valid_user2items.keys())
-                # print(user_embedding.shape)
-                # print(item_embedding.shape)
-                # print(user_embedding)
-                # print(item_embedding)
-                # print(train_user2items)
-                # print(valid_user2items)
-                # print(query_indices)
+                # train_user2items = defaultdict(list)
+                # valid_user2items = defaultdict(list)
+                # for i in range(len(input['user'])):
+                #     user_i = input['user'][i].item()
+                #     item_hist_i = input['item_hist'][i]
+                #     item_hist_i = item_hist_i[item_hist_i != self.num_items].tolist() # TODO: should only run only once
+                #     train_user2items[user_i].extend(item_hist_i)
+                #     valid_user2items[user_i].append(input['item'][i].item())
+                # query_indices = list(valid_user2items.keys())
                 rs = evaluate_metrics(user_embedding, item_embedding,
-                                      train_user2items, valid_user2items,
-                                      query_indices, self.metric_names)
+                                      self.train_user2items, self.valid_user2items,
+                                      self.query_indices, self.metric_names)
                 print(rs)
             else:
                 rs = {}
@@ -148,7 +144,7 @@ class Metric:
     def __init__(self, metric_name, best_direction, best_metric_name, **kwargs):
         self.rs_metric_names = ['F1', 'Recall', 'nRecall', 'Precision', 'F1', 'DCG', 'NDCG', 'MRR', 'HitRate',
                                 'HitRate', 'MAP']
-        self.rs = RS(kwargs['num_users'], kwargs['num_items'])
+        self.rs = RS(kwargs['num_users'], kwargs['num_items'], kwargs['train_user2items'], kwargs['valid_user2items'])
         self.metric_name = metric_name
         self.best_direction, self.best_metric_name = best_direction, best_metric_name
         self.metric, self.mode, self.mode_keys = self.make_metric(metric_name)
@@ -177,8 +173,8 @@ class Metric:
                 elif any(rs_metric_name in metric_name_i for rs_metric_name in self.rs_metric_names):
                     self.rs.add_metric(metric_name_i)
                     mode[split][metric_name_i] = 'full'
-                    mode_keys[split][metric_name_i]['input'].update(['user', 'item', 'target', 'item_hist'])
-                    mode_keys[split][metric_name_i]['output'].update(['pred', 'user_embedding', 'item_embedding'])
+                    # mode_keys[split][metric_name_i]['input'].update(['user', 'item', 'target', 'item_hist'])
+                    mode_keys[split][metric_name_i]['output'].update(['user_embedding', 'item_embedding'])
                 else:
                     raise ValueError('Not valid metric name')
         return metric, mode, mode_keys
