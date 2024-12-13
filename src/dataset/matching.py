@@ -19,8 +19,9 @@ class MatchingDataset(Dataset):
             self.process()
         self.data, self.meta = load(os.path.join(self.processed_folder, 'data'), mode='pickle')
         self.train_data_csr = self.data['train'].tocsr()
+        self.get_mode = 'rating'
 
-    def __getitem__(self, index): ## TODO: change add per user and per item looping
+    def __getitem__(self, index):  ## TODO: change add per user and per item looping
         user, item, rating = self.data[self.split].row, self.data[self.split].col, self.data[self.split].data
         user_i = torch.tensor(user[index], dtype=torch.long)
         item_i = torch.tensor(item[index], dtype=torch.long)
@@ -81,9 +82,9 @@ class MatchingDataset(Dataset):
 
     def make_data(self):
         dataset = load_dataset(self.hf_data_name, cache_dir=self.raw_folder)
-        dataset = self.parse_dataset(dataset)
+        dataset, relation = self.parse_dataset(dataset)
         meta = {'num_users': dataset['train'].shape[0], 'num_items': dataset['train'].shape[1],
-                'num_ratings': {'train': dataset['train'].nnz, 'test': dataset['test'].nnz}}
+                'num_ratings': {'train': dataset['train'].nnz, 'test': dataset['test'].nnz, 'relation': relation}}
         return dataset, meta
 
     def parse_dataset(self, dataset):
@@ -139,7 +140,25 @@ class MatchingDataset(Dataset):
                                       shape=(num_users, num_items))
         dataset['test'] = coo_matrix((np.ones(len(test_users)), (test_users, test_items)),
                                      shape=(num_users, num_items))
-        return dataset
+        relation = {}
+        relation['train'] = self.make_relation(dataset['train'])
+        relation['test'] = self.make_relation(dataset['test'])
+        return dataset, relation
+
+    def make_relation(self, dataset):
+        dataset_csr = dataset.tocsr()
+        user2items = []
+        for i in range(dataset_csr.shape[0]):
+            indices = dataset_csr.indices[dataset_csr.indptr[i]:dataset_csr.indptr[i + 1]].tolist()
+            user2items.append(indices)
+
+        dataset_csc = dataset.tocsc()
+        item2users = []
+        for i in range(dataset_csc.shape[1]):
+            indices = dataset_csc.indices[dataset_csc.indptr[i]:dataset_csc.indptr[i + 1]].tolist()
+            item2users.append(indices)
+        relation = {'user2item': user2items, 'item2users': item2users}
+        return relation
 
 
 class AmazonBeauty(MatchingDataset):
