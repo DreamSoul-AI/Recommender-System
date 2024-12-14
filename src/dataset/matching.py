@@ -11,7 +11,7 @@ class MatchingDataset(Dataset):
     data_name = None
     hf_data_name = None
 
-    def __init__(self, root, split, transform=None):
+    def __init__(self, root, split, get_mode='rating', transform=None):
         self.root = os.path.expanduser(root)
         self.split = split
         self.transform = transform
@@ -19,17 +19,39 @@ class MatchingDataset(Dataset):
             self.process()
         self.data, self.meta = load(os.path.join(self.processed_folder, 'data'), mode='pickle')
         self.train_data_csr = self.data['train'].tocsr()
-        self.get_mode = 'rating'
+        self.train_data_csc = self.data['train'].tocsc()
+        self.get_mode = get_mode
 
-    def __getitem__(self, index):  ## TODO: change add per user and per item looping
-        user, item, rating = self.data[self.split].row, self.data[self.split].col, self.data[self.split].data
-        user_i = torch.tensor(user[index], dtype=torch.long)
-        item_i = torch.tensor(item[index], dtype=torch.long)
-        rating_i = torch.tensor(rating[index], dtype=torch.long)
-        item_hist_i = self.train_data_csr[user_i, :].indices
-        item_hist_i = item_hist_i[item_hist_i != item[index]]
-        item_hist_i = torch.tensor(item_hist_i, dtype=torch.long)
-        input = {'user': user_i, 'item': item_i, 'target': rating_i, 'item_hist': item_hist_i}
+    def __getitem__(self, index):
+        if self.get_mode == 'rating':
+            user, item, rating = self.data[self.split].row, self.data[self.split].col, self.data[self.split].data
+            user_i = torch.tensor(user[index], dtype=torch.long)
+            item_i = torch.tensor(item[index], dtype=torch.long)
+            rating_i = torch.tensor(rating[index], dtype=torch.long)
+
+            user_hist_i = self.train_data_csc[:, item_i].indices
+            user_hist_i = user_hist_i[user_hist_i != user[index]]
+            user_hist_i = torch.tensor(user_hist_i, dtype=torch.long)
+
+            item_hist_i = self.train_data_csr[user_i, :].indices
+            item_hist_i = item_hist_i[item_hist_i != item[index]]
+            item_hist_i = torch.tensor(item_hist_i, dtype=torch.long)
+            input = {'user': user_i, 'item': item_i, 'target': rating_i,
+                     'user_hist': user_hist_i, 'item_hist': item_hist_i}
+        elif self.get_mode == 'user':
+            user = self.data[self.split].row
+            user_i = torch.tensor(user[index], dtype=torch.long)
+            item_i = torch.tensor(self.train_data_csr[user_i, :].indices)
+            rating_i = torch.tensor(self.train_data_csr[user_i, :].data)
+            input = {'user': user_i, 'item': item_i, 'target': rating_i}
+        elif self.get_mode == 'item':
+            item = self.data[self.split].col
+            item_i = torch.tensor(item[index], dtype=torch.long)
+            user_i = torch.tensor(self.train_data_csc[:, item_i].indices)
+            rating_i = torch.tensor(self.train_data_csc[:, item_i].data)
+            input = {'user': user_i, 'item': item_i, 'target': rating_i}
+        else:
+            raise ValueError('Not valid get mode: {}'.format(self.get_mode))
         if self.transform is not None:
             input = self.transform(input)
         return input
@@ -51,9 +73,12 @@ class MatchingDataset(Dataset):
 
     @property
     def max_length(self):
+        max_length = {}
+        non_zero_counts = np.diff(self.train_data_csc.indptr)
+        max_length['user'] = non_zero_counts.max()
         non_zero_counts = np.diff(self.train_data_csr.indptr)
-        max_non_zeros = non_zero_counts.max()
-        return max_non_zeros
+        max_length['item'] = non_zero_counts.max()
+        return max_length
 
     @property
     def processed_folder(self):
@@ -84,7 +109,8 @@ class MatchingDataset(Dataset):
         dataset = load_dataset(self.hf_data_name, cache_dir=self.raw_folder)
         dataset, relation = self.parse_dataset(dataset)
         meta = {'num_users': dataset['train'].shape[0], 'num_items': dataset['train'].shape[1],
-                'num_ratings': {'train': dataset['train'].nnz, 'test': dataset['test'].nnz, 'relation': relation}}
+                'num_ratings': {'train': dataset['train'].nnz, 'test': dataset['test'].nnz},
+                'relation': relation}
         return dataset, meta
 
     def parse_dataset(self, dataset):
@@ -165,21 +191,21 @@ class AmazonBeauty(MatchingDataset):
     data_name = 'AmazonBeauty'
     hf_data_name = 'reczoo/AmazonBeauty_m1'
 
-    def __init__(self, root, split, transform=None):
-        super().__init__(root, split, transform)
+    def __init__(self, root, split, get_mode='rating', transform=None):
+        super().__init__(root, split, get_mode, transform)
 
 
 class Gowalla(MatchingDataset):
     data_name = 'Gowalla'
     hf_data_name = 'reczoo/Gowalla_m1'
 
-    def __init__(self, root, split, transform=None):
-        super().__init__(root, split, transform)
+    def __init__(self, root, split, get_mode='rating', transform=None):
+        super().__init__(root, split, get_mode, transform)
 
 
 class Yelp18(MatchingDataset):
     data_name = 'Yelp18'
     hf_data_name = 'reczoo/Yelp18_m1'
 
-    def __init__(self, root, split, transform=None):
-        super().__init__(root, split, transform)
+    def __init__(self, root, split, get_mode='rating', transform=None):
+        super().__init__(root, split, get_mode, transform)

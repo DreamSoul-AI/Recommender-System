@@ -41,9 +41,13 @@ class SimpleX(nn.Module):
         return item_embedding
 
     def forward(self, user, item, rating, item_hist):
-        item_hist_ = item_hist.clone()
-        item_hist_[item_hist_ == -100] = self.num_items
-        user_embedding = self.user_embedding(user, item_hist_)
+        # item_hist_ = item_hist.clone()
+        # item_hist_[item_hist_ == -100] = self.num_items
+        item_hist_ = torch.where(item_hist == -100, item_hist.new_ones((1,)), item_hist)
+        print(item_hist)
+        print(item_hist_)
+        exit()
+        user_embedding = self.user_embedding(user, item_hist)
         user_embedding = self.dropout(user_embedding)
         item_embedding = self.item_embedding(item)
         if item_embedding.dim() == 2:

@@ -46,7 +46,7 @@ def runExperiment():
     dataset = make_dataset(cfg['data_name'])
     dataset = process_dataset(dataset)
     model = make_model(cfg['model'])
-    train_user2items, valid_user2items = make_user2items(dataset)  # TODO: should store in dataset in device
+    # train_user2items, valid_user2items = make_user2items(dataset)  # TODO: should store in dataset in device
     result = resume(cfg['checkpoint_path'], resume_mode=cfg['resume_mode'])
     if result is None:
         cfg['step'] = 0
@@ -55,7 +55,8 @@ def runExperiment():
         scheduler = make_scheduler(optimizer, cfg[cfg['tag']]['optimizer'])
         logger = make_logger(cfg['logger_path'], data_name=cfg['data_name'], run_mode=cfg['run_mode'],
                              num_users=model.num_users, num_items=model.num_items,
-                             train_user2items=train_user2items, valid_user2items=valid_user2items)
+                             train_user2items=dataset['train'].meta['relation']['train'],
+                             valid_user2items=dataset['train'].meta['relation']['test'])
     else:
         cfg['step'] = result['cfg']['step']
         model = model.to(cfg['device'])
@@ -63,7 +64,8 @@ def runExperiment():
         scheduler = make_scheduler(optimizer, cfg[cfg['tag']]['optimizer'])
         logger = make_logger(cfg['logger_path'], data_name=cfg['data_name'], run_mode=cfg['run_mode'],
                              num_users=model.num_users, num_items=model.num_items,
-                             train_user2items=train_user2items, valid_user2items=valid_user2items)
+                             train_user2items=dataset['train'].meta['relation']['train'],
+                             valid_user2items=dataset['train'].meta['relation']['test'])
         model.load_state_dict(result['model'])
         optimizer.load_state_dict(result['optimizer'])
         scheduler.load_state_dict(result['scheduler'])

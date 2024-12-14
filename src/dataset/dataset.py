@@ -17,9 +17,10 @@ def make_dataset(data_name, transform=True, verbose=True):
         if transform:
             if cfg['max_length_mode'] == 'longest':
                 max_length = dataset_['train'].max_length
-                cfg['model']['max_length'] = int(16 * np.ceil(max_length / 16))
+                cfg['model']['max_length'] = {'user': int(16 * np.ceil(max_length['user'] / 16)),
+                                              'item': int(16 * np.ceil(max_length['item'] / 16))}
             else:
-                cfg['model']['max_length'] = 128
+                cfg['model']['max_length'] = {'user': 128, 'item': 128}
             dataset_['train'].transform = dataset.Compose([NegativeSampling(cfg['model']['stats']['num_items'],
                                                                             cfg['model']['num_negatives']),
                                                            Padding(cfg['model']['pad_token'],
