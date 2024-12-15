@@ -103,12 +103,21 @@ class Padding(torch.nn.Module):
         self.max_length = max_length
 
     def forward(self, input):
-        if len(input['item_hist']) > self.max_length:
-            input['item_hist'] = input['item_hist'][:self.max_length]
-        else:
-            pad_length = self.max_length - len(input['item_hist'])
-            input['item_hist'] = torch.cat(
-                [input['item_hist'], input['item_hist'].new_tensor([self.pad_token] * pad_length)])
+        if 'user_hist' in input:
+            if len(input['user_hist']) > self.max_length['user']:
+                input['user_hist'] = input['user_hist'][:self.max_length['user']]
+            else:
+                pad_length = self.max_length['user'] - len(input['user_hist'])
+                input['user_hist'] = torch.cat(
+                    [input['user_hist'], input['user_hist'].new_tensor([self.pad_token] * pad_length)])
+
+        if 'item_hist' in input:
+            if len(input['item_hist']) > self.max_length['item']:
+                input['item_hist'] = input['item_hist'][:self.max_length['item']]
+            else:
+                pad_length = self.max_length['item'] - len(input['item_hist'])
+                input['item_hist'] = torch.cat(
+                    [input['item_hist'], input['item_hist'].new_tensor([self.pad_token] * pad_length)])
         return input
 
 

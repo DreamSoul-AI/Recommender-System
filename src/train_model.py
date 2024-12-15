@@ -134,24 +134,27 @@ def train(data_loader, model, optimizer, scheduler, logger):
     return
 
 
-def make_user2items(dataset):
-    data_loader = make_data_loader(dataset, cfg[cfg['tag']]['optimizer']['batch_size'])
-    train_user2items = defaultdict(list)
-    for i, input in enumerate(data_loader['train']): # TODO this should be set in the beginning
-        for j in range(len(input['user'])):
-            user_i_j = input['user'][j].item()
-            item_hist_i_j = input['item_hist'][j]
-            item_hist_i_j = item_hist_i_j[item_hist_i_j != -100].tolist()
-            train_user2items[user_i_j].extend(item_hist_i_j)
-    valid_user2items = defaultdict(list)
-    for i, input in enumerate(data_loader['test']):
-        for j in range(len(input['user'])):
-            user_i_j = input['user'][j].item()
-            valid_user2items[user_i_j].append(input['item'][j].item())
-    return train_user2items, valid_user2items
+# def make_user2items(dataset):
+#     data_loader = make_data_loader(dataset, cfg[cfg['tag']]['optimizer']['batch_size'])
+#     train_user2items = defaultdict(list)
+#     for i, input in enumerate(data_loader['train']): # TODO this should be set in the beginning
+#         for j in range(len(input['user'])):
+#             user_i_j = input['user'][j].item()
+#             item_hist_i_j = input['item_hist'][j]
+#             item_hist_i_j = item_hist_i_j[item_hist_i_j != -100].tolist()
+#             train_user2items[user_i_j].extend(item_hist_i_j)
+#     valid_user2items = defaultdict(list)
+#     for i, input in enumerate(data_loader['test']):
+#         for j in range(len(input['user'])):
+#             user_i_j = input['user'][j].item()
+#             valid_user2items[user_i_j].append(input['item'][j].item())
+#     return train_user2items, valid_user2items
 
 
 def test(dataset, model, logger):
+    # TODO: need to change dataset get mode for gathering embeddings
+    print('here')
+    exit()
     data_loader = make_data_loader(dataset, cfg[cfg['tag']]['optimizer']['batch_size'], shuffle=False)
     with torch.no_grad():
         model.train(False)

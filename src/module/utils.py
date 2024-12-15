@@ -1,6 +1,13 @@
+import inspect
 import torch
 from collections.abc import Iterable, Mapping
 from itertools import repeat
+
+
+def filter_args(func, arg_dict):
+    sig = inspect.signature(func)
+    valid_args = {k: v for k, v in arg_dict.items() if k in sig.parameters}
+    return valid_args
 
 
 def ntuple(n):

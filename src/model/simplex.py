@@ -25,6 +25,7 @@ class SimpleX(nn.Module):
             self.global_bias = nn.Parameter(torch.zeros(1, ))
 
     def user_embedding(self, user, item_hist):
+        item_hist = self.make_padding(item_hist, self.num_items)
         user_embedding = self.user_weight(user)
         item_hist_embedding = self.item_weight(item_hist)
         user_embedding = self.behavior_aggregation(user_embedding, item_hist_embedding)
@@ -40,13 +41,7 @@ class SimpleX(nn.Module):
             item_embedding = torch.cat([item_embedding, self.item_bias(item)], dim=-1)
         return item_embedding
 
-    def forward(self, user, item, rating, item_hist):
-        # item_hist_ = item_hist.clone()
-        # item_hist_[item_hist_ == -100] = self.num_items
-        item_hist_ = torch.where(item_hist == -100, item_hist.new_ones((1,)), item_hist)
-        print(item_hist)
-        print(item_hist_)
-        exit()
+    def forward(self, user, item, item_hist):
         user_embedding = self.user_embedding(user, item_hist)
         user_embedding = self.dropout(user_embedding)
         item_embedding = self.item_embedding(item)
@@ -56,6 +51,10 @@ class SimpleX(nn.Module):
         if self.enable_bias:  # user_bias and global_bias only influence training, but not inference for ranking
             output_rating = self.user_bias(user) + self.global_bias
         return output_rating, user_embedding, item_embedding
+
+    def make_padding(self, hist, padding_idx):
+        hist = torch.where(hist == -100, hist.new_ones((1,)) * padding_idx, hist)
+        return hist
 
 
 class BehaviorAggregator(nn.Module):

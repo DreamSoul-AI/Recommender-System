@@ -1,6 +1,7 @@
 import torch
 import torch.nn as nn
 import torch.nn.functional as F
+from module import filter_args
 from .loss import make_loss_fn
 
 
@@ -37,17 +38,20 @@ class RecommenderSystem(nn.Module):
 
     def forward(self, input):
         output = {}
-        user, item, target, item_hist = input['user'], input['item'], input['target'], input['item_hist']
-        if self.model_name not in ['base']:
-            pred, user_embedding, item_embedding = self.base(user, item, target, item_hist)
+        # user, item, target, item_hist = input['user'], input['item'], input['target'], input['item_hist']
+        # pred, user_embedding, item_embedding = self.base(user, item, target, item_hist)
+        valid_input = filter_args(self.base.forward, input)
+        pred, user_embedding, item_embedding = self.base(**valid_input)
+        if self.model_name in ['simplex']:
             output['user_embedding'] = user_embedding
             output['item_embedding'] = item_embedding[:, 0]
-        else:
-            pred = self.base(user, item, target, item_hist)
+        elif self.model_name in ['base']:
             output['user_embedding'] = None
             output['item_embedding'] = None
+        else:
+            raise ValueError('Not valid model name')
         output['pred'] = pred
-        output['loss'] = self.loss_fn(output['pred'], target)
+        output['loss'] = self.loss_fn(output['pred'], input['target'])
         return output
 
 
