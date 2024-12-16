@@ -23,23 +23,17 @@ class RecommenderSystem(nn.Module):
         return self.base.num_items
 
     def user_embedding(self, input):
-        if self.model_name in ['simplex']:
-            user_embedding = self.base.user_embedding(input['user'], input['item_hist'])
-        else:
-            raise NotImplementedError
+        valid_input = filter_args(self.base.user_embedding, input)
+        user_embedding = self.base.user_embedding(**valid_input)
         return user_embedding
 
     def item_embedding(self, input):
-        if self.model_name in ['simplex']:
-            item_embedding = self.base.item_embedding(input['item'])
-        else:
-            raise NotImplementedError
+        valid_input = filter_args(self.base.item_embedding, input)
+        item_embedding = self.base.item_embedding(**valid_input)
         return item_embedding
 
     def forward(self, input):
         output = {}
-        # user, item, target, item_hist = input['user'], input['item'], input['target'], input['item_hist']
-        # pred, user_embedding, item_embedding = self.base(user, item, target, item_hist)
         valid_input = filter_args(self.base.forward, input)
         pred, user_embedding, item_embedding = self.base(**valid_input)
         if self.model_name in ['simplex']:

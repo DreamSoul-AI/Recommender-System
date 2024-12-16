@@ -5,7 +5,6 @@ import shutil
 import time
 import torch
 import torch.backends.cudnn as cudnn
-from collections import defaultdict
 from config import cfg, process_args
 from dataset import make_dataset, make_data_loader, process_dataset
 from metric import make_logger
@@ -46,7 +45,6 @@ def runExperiment():
     dataset = make_dataset(cfg['data_name'])
     dataset = process_dataset(dataset)
     model = make_model(cfg['model'])
-    # train_user2items, valid_user2items = make_user2items(dataset)  # TODO: should store in dataset in device
     result = resume(cfg['checkpoint_path'], resume_mode=cfg['resume_mode'])
     if result is None:
         cfg['step'] = 0
@@ -96,6 +94,7 @@ def train(data_loader, model, optimizer, scheduler, logger):
     start_time = time.time()
     with logger.profiler:
         for i, input in data_loader:
+            print(i)
             if i % cfg['step_period'] == 0 and cfg['profile']:
                 logger.profiler.step()
             input_size = input['user'].size(0)
@@ -134,45 +133,25 @@ def train(data_loader, model, optimizer, scheduler, logger):
     return
 
 
-# def make_user2items(dataset):
-#     data_loader = make_data_loader(dataset, cfg[cfg['tag']]['optimizer']['batch_size'])
-#     train_user2items = defaultdict(list)
-#     for i, input in enumerate(data_loader['train']): # TODO this should be set in the beginning
-#         for j in range(len(input['user'])):
-#             user_i_j = input['user'][j].item()
-#             item_hist_i_j = input['item_hist'][j]
-#             item_hist_i_j = item_hist_i_j[item_hist_i_j != -100].tolist()
-#             train_user2items[user_i_j].extend(item_hist_i_j)
-#     valid_user2items = defaultdict(list)
-#     for i, input in enumerate(data_loader['test']):
-#         for j in range(len(input['user'])):
-#             user_i_j = input['user'][j].item()
-#             valid_user2items[user_i_j].append(input['item'][j].item())
-#     return train_user2items, valid_user2items
-
-
 def test(dataset, model, logger):
     # TODO: need to change dataset get mode for gathering embeddings
-    print('here')
-    exit()
-    data_loader = make_data_loader(dataset, cfg[cfg['tag']]['optimizer']['batch_size'], shuffle=False)
     with torch.no_grad():
         model.train(False)
-
+        data_loader = make_data_loader(dataset, cfg[cfg['tag']]['optimizer']['batch_size'], shuffle=False)
+        dataset['train'].get_mode = 'user'
         user_embedding = []
         for i, input in enumerate(data_loader['train']):
             input = to_device(input, cfg['device'])
-            print(i, input['user'])
             user_embedding_i = model.user_embedding(input)
             user_embedding.append(user_embedding_i)
-        exit()
+        dataset['train'].get_mode = 'item' # TODO: need to fix negative sampling with item existing
         item_embedding = []
-        for i in range(0, dataset['train'].num_items, cfg[cfg['tag']]['optimizer']['batch_size']['test']):
-            item = torch.arange(i, i + cfg[cfg['tag']]['optimizer']['batch_size']['test'])
-            input = {'item': item}
-            item_embedding_i = model.user_embedding(input)
+        for i, input in enumerate(data_loader['train']):
+            input = to_device(input, cfg['device'])
+            item_embedding_i = model.item_embedding(input)
             item_embedding.append(item_embedding_i)
 
+        dataset['train'].get_mode = 'rating'
         #     evaluation = logger.evaluate('test', 'batch', input, output)
         #     logger.append(evaluation, 'test', input_size)
         #     logger.add('test', input, output)

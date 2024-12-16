@@ -41,15 +41,13 @@ class MatchingDataset(Dataset):
         elif self.get_mode == 'user':
             user = self.data[self.split].row
             user_i = torch.tensor(user[index], dtype=torch.long)
-            item_i = torch.tensor(self.train_data_csr[user_i, :].indices)
-            rating_i = torch.tensor(self.train_data_csr[user_i, :].data)
-            input = {'user': user_i, 'item': item_i, 'target': rating_i}
+            item_i = torch.tensor(self.train_data_csr[user_i, :].indices, dtype=torch.long)
+            input = {'user': user_i, 'item_hist': item_i}
         elif self.get_mode == 'item':
             item = self.data[self.split].col
             item_i = torch.tensor(item[index], dtype=torch.long)
-            user_i = torch.tensor(self.train_data_csc[:, item_i].indices)
-            rating_i = torch.tensor(self.train_data_csc[:, item_i].data)
-            input = {'user': user_i, 'item': item_i, 'target': rating_i}
+            user_i = torch.tensor(self.train_data_csc[:, item_i].indices, dtype=torch.long)
+            input = {'item': item_i, 'user_hist': user_i}
         else:
             raise ValueError('Not valid get mode: {}'.format(self.get_mode))
         if self.transform is not None:
