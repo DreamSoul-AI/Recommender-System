@@ -50,8 +50,8 @@ class MatchingDataset(Dataset):
             input = {'item': item_i, 'user_hist': user_i}
         else:
             raise ValueError('Not valid get mode: {}'.format(self.get_mode))
-        if self.transform is not None:
-            input = self.transform(input)
+        if self.transform[self.get_mode] is not None:
+            input = self.transform[self.get_mode](input)
         return input
 
     def __len__(self):
@@ -181,7 +181,7 @@ class MatchingDataset(Dataset):
         for i in range(dataset_csc.shape[1]):
             indices = dataset_csc.indices[dataset_csc.indptr[i]:dataset_csc.indptr[i + 1]].tolist()
             item2users.append(indices)
-        relation = {'user2item': user2items, 'item2users': item2users}
+        relation = {'user2items': user2items, 'item2users': item2users}
         return relation
 
 

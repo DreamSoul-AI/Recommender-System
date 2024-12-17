@@ -13,7 +13,7 @@ def make_dataset(data_name, transform=True, verbose=True):
     root = './data/{}'.format(data_name)
     if data_name in ['AmazonBeauty', 'Gowalla', 'Yelp18']:
         dataset_['train'] = eval('dataset.{}(root=root, split=\'train\')'.format(data_name))
-        # dataset_['test'] = eval('dataset.{}(root=root, split=\'test\')'.format(data_name))
+        dataset_['test'] = eval('dataset.{}(root=root, split=\'test\')'.format(data_name))
         if transform:
             if cfg['max_length_mode'] == 'longest':
                 max_length = dataset_['train'].max_length
@@ -21,20 +21,20 @@ def make_dataset(data_name, transform=True, verbose=True):
                                               'item': int(16 * np.ceil(max_length['item'] / 16))}
             else:
                 cfg['model']['max_length'] = {'user': 128, 'item': 128}
-            # rating_transform = dataset.Compose([NegativeSampling(cfg['model']['stats']['num_items'],
-            #                                                      cfg['model']['num_negatives']),
-            #                                     Padding(cfg['model']['pad_token'],
-            #                                             cfg['model']['max_length'])])
-            # user_item_transform = dataset.Compose([Padding(cfg['model']['pad_token'],
-            #                                                cfg['model']['max_length'])])
-            # dataset_['train'].transform = {'user': user_item_transform, 'item': user_item_transform,
-            #                                'rating': rating_transform}
+            rating_transform = dataset.Compose([NegativeSampling(cfg['model']['stats']['num_items'],
+                                                                 cfg['model']['num_negatives']),
+                                                Padding(cfg['model']['pad_token'],
+                                                        cfg['model']['max_length'])])
+            user_item_transform = dataset.Compose([Padding(cfg['model']['pad_token'],
+                                                           cfg['model']['max_length'])])
+            dataset_['train'].transform = {'user': user_item_transform, 'item': user_item_transform,
+                                           'rating': rating_transform}
             # dataset_['test'].transform = dataset.Compose([Padding(cfg['model']['pad_token'],
             #                                                       cfg['model']['max_length'])])
-            dataset_['train'].transform = dataset.Compose([NegativeSampling(cfg['model']['stats']['num_items'],
-                                                                            cfg['model']['num_negatives']),
-                                                           Padding(cfg['model']['pad_token'],
-                                                                   cfg['model']['max_length'])])
+            # dataset_['train'].transform = dataset.Compose([NegativeSampling(cfg['model']['stats']['num_items'],
+            #                                                                 cfg['model']['num_negatives']),
+            #                                                Padding(cfg['model']['pad_token'],
+            #                                                        cfg['model']['max_length'])])
     else:
         raise ValueError('Not valid dataset name')
     if verbose:
@@ -136,16 +136,15 @@ class NegativeSampling(torch.nn.Module):
         self.num_negatives = num_negatives
 
     def forward(self, input):
-        if 'item' in input:
-            positives = set(torch.cat([input['item'].view(-1), input['item_hist']]).tolist())
-            negatives = set()
-            while len(negatives) < self.num_negatives:
-                new_negatives = torch.randint(low=0, high=self.num_items, size=(self.num_negatives,))
-                negatives.update(set(new_negatives.tolist()) - positives)
-            negatives = torch.tensor(list(negatives))
-            if len(negatives) > self.num_negatives:
-                negatives = negatives[:self.num_negatives]
+        positives = set(torch.cat([input['item'].view(-1), input['item_hist']]).tolist())
+        negatives = set()
+        while len(negatives) < self.num_negatives:
+            new_negatives = torch.randint(low=0, high=self.num_items, size=(self.num_negatives,))
+            negatives.update(set(new_negatives.tolist()) - positives)
+        negatives = torch.tensor(list(negatives))
+        if len(negatives) > self.num_negatives:
             negatives = negatives[:self.num_negatives]
-            input['item'] = torch.cat([input['item'].view(-1), negatives])
-            input['target'] = torch.cat([input['target'].view(-1), input['target'].new_zeros(len(negatives))])
+        negatives = negatives[:self.num_negatives]
+        input['item'] = torch.cat([input['item'].view(-1), negatives])
+        input['target'] = torch.cat([input['target'].view(-1), input['target'].new_zeros(len(negatives))])
         return input

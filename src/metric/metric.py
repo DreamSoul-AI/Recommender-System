@@ -1,5 +1,6 @@
 import os
 import numpy as np
+
 os.environ["KMP_DUPLICATE_LIB_OK"] = "TRUE"
 import torch
 import torch.nn.functional as F
@@ -98,24 +99,15 @@ class RS:
     def __call__(self, input, output):
         with torch.no_grad():
             if len(self.metric_names) > 0:
-                user_embedding = output['user_embedding'].cpu().numpy().astype(np.float64) # TODO: this is wrong should loop item embedding separately
+                user_embedding = output['user_embedding'].cpu().numpy().astype(np.float64)
                 item_embedding = output['item_embedding'].cpu().numpy().astype(np.float64)
-                # train_user2items = defaultdict(list)
-                # valid_user2items = defaultdict(list)
-                # for i in range(len(input['user'])):
-                #     user_i = input['user'][i].item()
-                #     item_hist_i = input['item_hist'][i]
-                #     item_hist_i = item_hist_i[item_hist_i != self.num_items].tolist() # TODO: should only run only once
-                #     train_user2items[user_i].extend(item_hist_i)
-                #     valid_user2items[user_i].append(input['item'][i].item())
-                # query_indices = list(valid_user2items.keys())
                 rs = evaluate_metrics(user_embedding, item_embedding,
                                       self.train_user2items, self.valid_user2items,
                                       self.query_indices, self.metric_names)
-                print(rs)
             else:
                 rs = {}
         return rs
+
 
 # def evaluate(self, train_generator, valid_generator):
 #     logging.info("Start evaluation...")
@@ -173,7 +165,6 @@ class Metric:
                 elif any(rs_metric_name in metric_name_i for rs_metric_name in self.rs_metric_names):
                     self.rs.add_metric(metric_name_i)
                     mode[split][metric_name_i] = 'full'
-                    # mode_keys[split][metric_name_i]['input'].update(['user', 'item', 'target', 'item_hist'])
                     mode_keys[split][metric_name_i]['output'].update(['user_embedding', 'item_embedding'])
                 else:
                     raise ValueError('Not valid metric name')

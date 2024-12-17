@@ -53,8 +53,8 @@ def runExperiment():
         scheduler = make_scheduler(optimizer, cfg[cfg['tag']]['optimizer'])
         logger = make_logger(cfg['logger_path'], data_name=cfg['data_name'], run_mode=cfg['run_mode'],
                              num_users=model.num_users, num_items=model.num_items,
-                             train_user2items=dataset['train'].meta['relation']['train'],
-                             valid_user2items=dataset['train'].meta['relation']['test'])
+                             train_user2items=dataset['train'].meta['relation']['train']['user2items'],
+                             valid_user2items=dataset['train'].meta['relation']['test']['user2items'])
     else:
         cfg['step'] = result['cfg']['step']
         model = model.to(cfg['device'])
@@ -62,8 +62,8 @@ def runExperiment():
         scheduler = make_scheduler(optimizer, cfg[cfg['tag']]['optimizer'])
         logger = make_logger(cfg['logger_path'], data_name=cfg['data_name'], run_mode=cfg['run_mode'],
                              num_users=model.num_users, num_items=model.num_items,
-                             train_user2items=dataset['train'].meta['relation']['train'],
-                             valid_user2items=dataset['train'].meta['relation']['test'])
+                             train_user2items=dataset['train'].meta['relation']['train']['user2items'],
+                             valid_user2items=dataset['train'].meta['relation']['test']['user2items'])
         model.load_state_dict(result['model'])
         optimizer.load_state_dict(result['optimizer'])
         scheduler.load_state_dict(result['scheduler'])
@@ -79,6 +79,7 @@ def runExperiment():
     while cfg['step'] < cfg['num_steps']:
         train(data_iterator, model, optimizer, scheduler, logger)
         test(dataset, model, logger)
+        exit()
         result = {'cfg': cfg, 'model': model.state_dict(),
                   'optimizer': optimizer.state_dict(), 'scheduler': scheduler.state_dict(),
                   'logger': logger.state_dict()}
@@ -94,7 +95,7 @@ def train(data_loader, model, optimizer, scheduler, logger):
     start_time = time.time()
     with logger.profiler:
         for i, input in data_loader:
-            print(i)
+            # print(i)
             if i % cfg['step_period'] == 0 and cfg['profile']:
                 logger.profiler.step()
             input_size = input['user'].size(0)
@@ -107,7 +108,7 @@ def train(data_loader, model, optimizer, scheduler, logger):
                     optimizer.step()
                     scheduler.step()
                     optimizer.zero_grad()
-            break
+            # break
             evaluation = logger.evaluate('train', 'batch', input, output)
             logger.append(evaluation, 'train', n=input_size)
             idx = cfg['step'] % cfg['eval_period']
@@ -134,34 +135,37 @@ def train(data_loader, model, optimizer, scheduler, logger):
 
 
 def test(dataset, model, logger):
-    # TODO: need to change dataset get mode for gathering embeddings
     with torch.no_grad():
         model.train(False)
         data_loader = make_data_loader(dataset, cfg[cfg['tag']]['optimizer']['batch_size'], shuffle=False)
+
         dataset['train'].get_mode = 'user'
         user_embedding = []
         for i, input in enumerate(data_loader['train']):
             input = to_device(input, cfg['device'])
             user_embedding_i = model.user_embedding(input)
             user_embedding.append(user_embedding_i)
-        dataset['train'].get_mode = 'item' # TODO: need to fix negative sampling with item existing
+        user_embedding = torch.cat(user_embedding)
+
+        dataset['train'].get_mode = 'item'
         item_embedding = []
         for i, input in enumerate(data_loader['train']):
             input = to_device(input, cfg['device'])
             item_embedding_i = model.item_embedding(input)
             item_embedding.append(item_embedding_i)
+        item_embedding = torch.cat(item_embedding)
 
         dataset['train'].get_mode = 'rating'
-        #     evaluation = logger.evaluate('test', 'batch', input, output)
-        #     logger.append(evaluation, 'test', input_size)
-        #     logger.add('test', input, output)
-        # evaluation = logger.evaluate('test', 'full')
-        # logger.append(evaluation, 'test')
-        # info = {'info': ['Model: {}'.format(cfg['tag']),
-        #                  'Test Epoch: {}({:.0f}%)'.format(cfg['step'] // cfg['eval_period'], 100.)]}
-        # logger.append(info, 'test')
-        # print(logger.write('test'))
-        # logger.save(True)
+
+        output = {'user_embedding': user_embedding, 'item_embedding': item_embedding}
+        logger.add('test', input, output)
+        evaluation = logger.evaluate('test', 'full')
+        logger.append(evaluation, 'test')
+        info = {'info': ['Model: {}'.format(cfg['tag']),
+                         'Test Epoch: {}({:.0f}%)'.format(cfg['step'] // cfg['eval_period'], 100.)]}
+        logger.append(info, 'test')
+        print(logger.write('test'))
+        logger.save(True)
     return
 
 
