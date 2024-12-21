@@ -28,8 +28,8 @@ def process_control():
     cfg['model']['mf'] = {'hidden_size': 256}
     cfg['model']['nmf'] = {'hidden_size': [256, 128]}
     cfg['model']['ae'] = {'encoder_hidden_size': [256, 128], 'decoder_hidden_size': [128, 256]}
-    cfg['model']['simplex'] = {'hidden_size': 64, 'aggregation_mode': 'mean', 'gamma': 1, 'attention_dropout': 0.1,
-                               'net_dropout': 0., 'enable_bias': True}
+    cfg['model']['simplex'] = {'hidden_size': 64, 'aggregation_mode': 'mean', 'gamma': 1, 'attention_dropout': 0.,
+                               'net_dropout': 0.1, 'enable_bias': True}
     cfg['model']['gru4rec'] = {'hidden_size': 256}
     cfg['model']['youtubednn'] = {'hidden_size': 256}
     if 'make_stats' not in cfg:
@@ -50,7 +50,7 @@ def process_control():
     cfg[tag]['optimizer']['lr'] = 1e-3
     cfg[tag]['optimizer']['momentum'] = 0.9
     cfg[tag]['optimizer']['betas'] = (0.9, 0.999)
-    cfg[tag]['optimizer']['weight_decay'] = 0
+    cfg[tag]['optimizer']['weight_decay'] = 1e-4
     cfg[tag]['optimizer']['nesterov'] = True
     cfg[tag]['optimizer']['batch_size'] = {'train': cfg['batch_size'], 'test': cfg['batch_size']}
     cfg[tag]['optimizer']['step_period'] = cfg['step_period']

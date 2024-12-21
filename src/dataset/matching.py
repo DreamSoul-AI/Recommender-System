@@ -39,13 +39,15 @@ class MatchingDataset(Dataset):
             input = {'user': user_i, 'item': item_i, 'target': rating_i,
                      'user_hist': user_hist_i, 'item_hist': item_hist_i}
         elif self.get_mode == 'user':
-            user = self.data[self.split].row
-            user_i = torch.tensor(user[index], dtype=torch.long)
+            # user = self.data[self.split].row
+            # user_i = torch.tensor(user[index], dtype=torch.long)
+            user_i = torch.tensor(index, dtype=torch.long)
             item_i = torch.tensor(self.train_data_csr[user_i, :].indices, dtype=torch.long)
             input = {'user': user_i, 'item_hist': item_i}
         elif self.get_mode == 'item':
-            item = self.data[self.split].col
-            item_i = torch.tensor(item[index], dtype=torch.long)
+            # item = self.data[self.split].col
+            # item_i = torch.tensor(item[index], dtype=torch.long)
+            item_i = torch.tensor(index, dtype=torch.long)
             user_i = torch.tensor(self.train_data_csc[:, item_i].indices, dtype=torch.long)
             input = {'item': item_i, 'user_hist': user_i}
         else:
@@ -55,7 +57,15 @@ class MatchingDataset(Dataset):
         return input
 
     def __len__(self):
-        return self.num_ratings
+        if self.get_mode == 'rating':
+            length = self.num_ratings
+        elif self.get_mode == 'user':
+            length = self.num_users
+        elif self.get_mode == 'item':
+            length = self.num_items
+        else:
+            raise ValueError('Not valid get mode: {}'.format(self.get_mode))
+        return length
 
     @property
     def num_users(self):
@@ -160,13 +170,17 @@ class MatchingDataset(Dataset):
 
         num_users = len(user_token_to_index)
         num_items = len(item_token_to_index)
+        # print(train_users[:100], train_items[:100])
+        # print(test_users[:100], test_items[:100])
         dataset['train'] = coo_matrix((np.ones(len(train_users)), (train_users, train_items)),
                                       shape=(num_users, num_items))
         dataset['test'] = coo_matrix((np.ones(len(test_users)), (test_users, test_items)),
                                      shape=(num_users, num_items))
         relation = {}
         relation['train'] = self.make_relation(dataset['train'])
+        # print('test')
         relation['test'] = self.make_relation(dataset['test'])
+        # exit()
         return dataset, relation
 
     def make_relation(self, dataset):
@@ -175,7 +189,7 @@ class MatchingDataset(Dataset):
         for i in range(dataset_csr.shape[0]):
             indices = dataset_csr.indices[dataset_csr.indptr[i]:dataset_csr.indptr[i + 1]].tolist()
             user2items.append(indices)
-
+        # print(user2items[:10])
         dataset_csc = dataset.tocsc()
         item2users = []
         for i in range(dataset_csc.shape[1]):

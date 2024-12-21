@@ -49,7 +49,7 @@ class SimpleX(nn.Module):
             item_embedding = item_embedding.unsqueeze(1)
         output_rating = torch.bmm(item_embedding, user_embedding.unsqueeze(-1)).squeeze(-1)
         if self.enable_bias:  # user_bias and global_bias only influence training, but not inference for ranking
-            output_rating = self.user_bias(user) + self.global_bias
+            output_rating = output_rating + self.user_bias(user) + self.global_bias
         return output_rating, user_embedding, item_embedding
 
     def make_padding(self, hist, padding_idx):

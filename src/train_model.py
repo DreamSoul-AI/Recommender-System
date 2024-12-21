@@ -79,7 +79,6 @@ def runExperiment():
     while cfg['step'] < cfg['num_steps']:
         train(data_iterator, model, optimizer, scheduler, logger)
         test(dataset, model, logger)
-        exit()
         result = {'cfg': cfg, 'model': model.state_dict(),
                   'optimizer': optimizer.state_dict(), 'scheduler': scheduler.state_dict(),
                   'logger': logger.state_dict()}
@@ -146,6 +145,7 @@ def test(dataset, model, logger):
             user_embedding_i = model.user_embedding(input)
             user_embedding.append(user_embedding_i)
         user_embedding = torch.cat(user_embedding)
+        # print(user_embedding[:10].sum(dim=-1))
 
         dataset['train'].get_mode = 'item'
         item_embedding = []
@@ -154,6 +154,7 @@ def test(dataset, model, logger):
             item_embedding_i = model.item_embedding(input)
             item_embedding.append(item_embedding_i)
         item_embedding = torch.cat(item_embedding)
+        # print(item_embedding[:10])
 
         dataset['train'].get_mode = 'rating'
 
