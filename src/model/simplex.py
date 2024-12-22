@@ -2,6 +2,7 @@ import torch
 import torch.nn as nn
 import torch.nn.functional as F
 from .rs import normalize_embedding
+from .model import init_param
 
 
 class SimpleX(nn.Module):
@@ -25,8 +26,8 @@ class SimpleX(nn.Module):
             self.global_bias = nn.Parameter(torch.zeros(1, ))
 
     def user_embedding(self, user, item_hist):
-        item_hist = self.make_padding(item_hist, self.num_items)
         user_embedding = self.user_weight(user)
+        item_hist = self.make_padding(item_hist, self.num_items)
         item_hist_embedding = self.item_weight(item_hist)
         user_embedding = self.behavior_aggregation(user_embedding, item_hist_embedding)
         user_embedding = normalize_embedding(user_embedding, self.embedding_mode, 'user')
@@ -118,4 +119,5 @@ def simplex(cfg):
     num_items = cfg['stats']['num_items']
     embedding_mode = cfg['embedding_mode']
     model = SimpleX(num_users, num_items, embedding_mode, **cfg['simplex'])
+    model.apply(init_param)
     return model

@@ -46,6 +46,8 @@ class RecommenderSystem(nn.Module):
             raise ValueError('Not valid model name')
         output['pred'] = pred
         output['loss'] = self.loss_fn(output['pred'], input['target'])
+        # print(output['loss'])
+        # exit()
         return output
 
 

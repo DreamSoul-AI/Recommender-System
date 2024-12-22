@@ -40,13 +40,12 @@ def process_control():
 
     cfg['model']['loss_kwargs'] = {}
     loss_hyperparam = {'contrastive': {'margin': 0.3, 'negative_weight': 10}, 'margin': {'margin': 0.3}}
-    cfg['model']['loss_kwargs']['embedding_regularizer'] = 1e-3
     cfg['model']['loss_kwargs']['loss_hyperparam'] = loss_hyperparam.get(cfg['loss_mode'], None)
 
     tag = cfg['tag']
     cfg[tag] = {}
     cfg[tag]['optimizer'] = {}
-    cfg[tag]['optimizer']['optimizer_name'] = 'Adam'
+    cfg[tag]['optimizer']['optimizer_name'] = 'AdamW'
     cfg[tag]['optimizer']['lr'] = 1e-3
     cfg[tag]['optimizer']['momentum'] = 0.9
     cfg[tag]['optimizer']['betas'] = (0.9, 0.999)

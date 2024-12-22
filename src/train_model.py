@@ -103,6 +103,10 @@ def train(data_loader, model, optimizer, scheduler, logger):
             loss = 1 / cfg['step_period'] * output['loss']
             if cfg['model_name'] != 'base':
                 loss.backward()
+                # for param_name, param in model.named_parameters():
+                #     if param.grad is not None:
+                #         print(param_name, param.grad.abs().sum())
+                # exit()
                 if (i + 1) % cfg['step_period'] == 0:
                     optimizer.step()
                     scheduler.step()
