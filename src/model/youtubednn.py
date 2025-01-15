@@ -3,7 +3,6 @@ import torch.nn as nn
 import torch.nn.functional as F
 # from .basic.features import SparseFeature, SequenceFeature
 # from .basic.layers import MLP, EmbeddingLayer
-import pdb
 
 """
 https://github.com/datawhalechina/torch-rechub/blob/main/torch_rechub/models/matching/youtube_dnn.py
@@ -36,7 +35,7 @@ class YoutubeDNN(nn.Module):
         # nn.init.constant_(self.item_bias.weight, 0.0)
         return
     
-    def user_tower(self, user, item_hist):
+    def user_embedding(self, user, item_hist):
         # Handle padding in item history
         mask = item_hist == -100  # Create a mask for padding
         item_hist = item_hist.clone()  # Avoid modifying the original tensor
@@ -55,20 +54,20 @@ class YoutubeDNN(nn.Module):
         # Pass through MLP and normalize
         deep_user_embedding = self.user_mlp(user_item_concat).unsqueeze(1)  # Shape: (batch_size, 1, embedding_dim)
         deep_user_embedding = F.normalize(deep_user_embedding, p=2, dim=2)  # L2 normalization along embedding dimension
-
-        return deep_user_embedding
+        # i need to squeeze here 
+        return deep_user_embedding.squeeze(1)
     
-    def item_tower(self, item):
+    def item_embedding(self, item):
 
         return self.item_weight(item)
     
-    def forward(self, user, item, rating, item_hist):
-
+    def forward(self, user, item, item_hist):
+    
         # Get embeddings from user and item towers
-        user_embedding = self.user_tower(user, item_hist)
-        item_embedding = self.item_tower(item)
-        #y = torch.mul(user_embedding, item_embedding).sum(dim=2)
-        return user_embedding.squeeze(1), item_embedding
+        user_embedding = self.user_embedding(user, item_hist)
+        item_embedding = self.item_embedding(item)
+        output_rating = torch.mul(user_embedding.unsqueeze(1), item_embedding).sum(dim=2)
+        return output_rating, user_embedding, item_embedding
 
 class AveragePooling(nn.Module):
     """Pooling the sequence embedding matrix by `mean`.

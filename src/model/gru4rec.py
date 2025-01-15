@@ -4,7 +4,6 @@ import torch.nn.functional as F
 import pdb
 import torch
 import torch.nn as nn
-import pdb
 
 """
 rewrite from https://github.com/reczoo/RecBox/blob/main/recbox/third_party/rechub/models/matching/gru4rec.py
@@ -49,11 +48,11 @@ class GRU4Rec(nn.Module):
         with torch.no_grad():
             self.item_embedding_layer.weight[self.padding_idx].fill_(0)
 
-    def user_embedding(self, user_ids, item_history):
+    def user_embedding(self, user, item_hist):
         
-        item_history = item_history.clone()
+        item_history = item_hist.clone()
         item_history[item_history == -100] = self.padding_idx
-        user_emb = self.user_embedding_layer(user_ids)  # Shape: [batch_size, hidden_size]
+        user_emb = self.user_embedding_layer(user)  # Shape: [batch_size, hidden_size]
 
         item_hist_emb = self.item_embedding_layer(item_history)  # Shape: [batch_size, seq_len, hidden_size]
 
@@ -73,17 +72,16 @@ class GRU4Rec(nn.Module):
         
         return user_embedding
 
-    def item_embedding(self, item_ids):
-        item_embedding = self.item_embedding_layer(item_ids)  # Shape: [batch_size, hidden_size]
+    def item_embedding(self, item):
+        item_embedding = self.item_embedding_layer(item)  # Shape: [batch_size, hidden_size]
         item_embedding = F.normalize(item_embedding, p=2, dim=-1)
         return item_embedding
 
-    def forward(self, user_ids, item_ids, ratings=None, item_history=None):
-
-        user_emb = self.user_embedding(user_ids, item_history)
-        item_emb = self.item_embedding(item_ids)
-        
-        return user_emb, item_emb
+    def forward(self, user, item, ratings=None, item_hist=None):
+        user_emb = self.user_embedding(user, item_hist)
+        item_emb = self.item_embedding(item)
+        output_rating = torch.bmm(item_emb, user_emb.unsqueeze(-1)).squeeze(-1)
+        return output_rating, user_emb, item_emb
 
 def gru4rec(cfg):
     num_users = cfg['stats']['num_users']
