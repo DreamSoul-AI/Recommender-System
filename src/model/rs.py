@@ -36,18 +36,14 @@ class RecommenderSystem(nn.Module):
         output = {}
         valid_input = filter_args(self.base.forward, input)
         pred, user_embedding, item_embedding = self.base(**valid_input)
-        if self.model_name in ['simplex','gru4rec','youtubednn','mf']:
-            output['user_embedding'] = user_embedding
-            output['item_embedding'] = item_embedding[:, 0]
-        elif self.model_name in ['base']:
+        if self.model_name in ['base']:
             output['user_embedding'] = None
             output['item_embedding'] = None
         else:
-            raise ValueError('Not valid model name')
+            output['user_embedding'] = user_embedding
+            output['item_embedding'] = item_embedding[:, 0]
         output['pred'] = pred
         output['loss'] = self.loss_fn(output['pred'], input['target'])
-        # print(output['loss'])
-        # exit()
         return output
 
 
