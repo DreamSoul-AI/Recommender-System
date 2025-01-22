@@ -36,12 +36,8 @@ class RecommenderSystem(nn.Module):
         output = {}
         valid_input = filter_args(self.base.forward, input)
         pred, user_embedding, item_embedding = self.base(**valid_input)
-        if self.model_name in ['base']:
-            output['user_embedding'] = None
-            output['item_embedding'] = None
-        else:
-            output['user_embedding'] = user_embedding
-            output['item_embedding'] = item_embedding[:, 0]
+        output['user_embedding'] = user_embedding
+        output['item_embedding'] = item_embedding[:, 0]
         output['pred'] = pred
         output['loss'] = self.loss_fn(output['pred'], input['target'])
         return output

@@ -49,7 +49,7 @@ def main():
         filename = '{}_{}'.format(run, mode)
         script_name = [['{}_model.py'.format(run)]]
         data_name = ['AmazonBeauty']
-        model_name = ['base', 'mf', 'simplex']
+        model_name = ['mf', 'simplex']
         score_mode = ['cosine', 'userproj', 'itemproj', 'pearson', 'dot']
         loss_mode = ['contrastive', 'mse', 'logistic', 'margin', 'bce', 'ce']
         control_name = [[data_name, model_name, score_mode, loss_mode]]

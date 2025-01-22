@@ -14,8 +14,6 @@ def process_control():
     cfg['num_steps'] = 1
     cfg['eval_period'] = -1
     cfg['num_epochs'] = 100
-    if cfg['model_name'] == 'base':
-        cfg['num_epochs'] = 1
     cfg['collate_mode'] = 'dict'
 
     cfg['max_length_mode'] = 'longest'
@@ -24,8 +22,7 @@ def process_control():
     cfg['model']['model_name'] = cfg['model_name']
     cfg['model']['embedding_mode'] = cfg['embedding_mode']
     cfg['model']['loss_mode'] = cfg['loss_mode']
-    cfg['model']['base'] = {}
-    cfg['model']['mf'] = {'hidden_size': 256}
+    cfg['model']['mf'] = {'hidden_size': 64, 'enable_bias': True}
     cfg['model']['nmf'] = {'hidden_size': [256, 128]}
     cfg['model']['ae'] = {'encoder_hidden_size': [256, 128], 'decoder_hidden_size': [128, 256]}
     cfg['model']['simplex'] = {'hidden_size': 64, 'aggregation_mode': 'mean', 'gamma': 1, 'attention_dropout': 0.,

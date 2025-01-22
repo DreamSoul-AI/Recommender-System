@@ -69,12 +69,9 @@ def runExperiment():
         scheduler.load_state_dict(result['scheduler'])
         logger.load_state_dict(result['logger'])
         logger.reset()
-    if cfg['model_name'] in ['base']:
-        data_loader = make_data_loader(dataset, cfg[cfg['tag']]['optimizer']['batch_size'])
-    else:
-        data_loader = make_data_loader(dataset, cfg[cfg['tag']]['optimizer']['batch_size'], cfg['num_steps'],
-                                       cfg['step'], cfg['step_period'], cfg['pin_memory'], cfg['num_workers'],
-                                       cfg['collate_mode'], cfg['seed'])
+    data_loader = make_data_loader(dataset, cfg[cfg['tag']]['optimizer']['batch_size'], cfg['num_steps'],
+                                   cfg['step'], cfg['step_period'], cfg['pin_memory'], cfg['num_workers'],
+                                   cfg['collate_mode'], cfg['seed'])
     data_iterator = enumerate(data_loader['train'])
     while cfg['step'] < cfg['num_steps']:
         train(data_iterator, model, optimizer, scheduler, logger)
@@ -101,17 +98,11 @@ def train(data_loader, model, optimizer, scheduler, logger):
             input = to_device(input, cfg['device'])
             output = model(input)
             loss = 1 / cfg['step_period'] * output['loss']
-            if cfg['model_name'] != 'base':
-                loss.backward()
-                # for param_name, param in model.named_parameters():
-                #     if param.grad is not None:
-                #         print(param_name, param.grad.abs().sum())
-                # exit()
-                if (i + 1) % cfg['step_period'] == 0:
-                    optimizer.step()
-                    scheduler.step()
-                    optimizer.zero_grad()
-            # break
+            loss.backward()
+            if (i + 1) % cfg['step_period'] == 0:
+                optimizer.step()
+                scheduler.step()
+                optimizer.zero_grad()
             evaluation = logger.evaluate('train', 'batch', input, output)
             logger.append(evaluation, 'train', n=input_size)
             idx = cfg['step'] % cfg['eval_period']
