@@ -2,7 +2,7 @@
 # control
 control:
   data_name: AmazonBeauty
-  model_name: mf
+  model_name: youtubednn
   embedding_mode: cosine
   loss_mode: contrastive
 # experiment
