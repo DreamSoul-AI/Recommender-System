@@ -5,6 +5,8 @@ from .rs import normalize_embedding
 from .model import init_param
 
 
+# https://github.com/reczoo/RecZoo/blob/main/matching/cf/SimpleX/src/SimpleX.py
+
 class SimpleX(nn.Module):
     def __init__(self, num_users, num_items, embedding_mode, hidden_size=64, aggregation_mode='mean', gamma=0.5,
                  attention_dropout=0., net_dropout=0., enable_bias=True):
@@ -24,6 +26,10 @@ class SimpleX(nn.Module):
             self.user_bias = nn.Embedding(self.num_users, 1)
             self.item_bias = nn.Embedding(self.num_items + 1, 1, padding_idx=self.num_items)
             self.global_bias = nn.Parameter(torch.zeros(1, ))
+
+    def make_padding(self, hist, padding_idx):
+        hist = torch.where(hist == -100, hist.new_ones((1,)) * padding_idx, hist)
+        return hist
 
     def user_embedding(self, user, item_hist):
         user_embedding = self.user_weight(user)
@@ -52,10 +58,6 @@ class SimpleX(nn.Module):
         if self.enable_bias:  # user_bias and global_bias only influence training, but not inference for ranking
             output_rating = output_rating + self.user_bias(user) + self.global_bias
         return output_rating, user_embedding, item_embedding
-
-    def make_padding(self, hist, padding_idx):
-        hist = torch.where(hist == -100, hist.new_ones((1,)) * padding_idx, hist)
-        return hist
 
 
 class BehaviorAggregator(nn.Module):

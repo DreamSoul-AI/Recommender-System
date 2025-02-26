@@ -22,10 +22,10 @@ def process_control():
     cfg['model']['model_name'] = cfg['model_name']
     cfg['model']['embedding_mode'] = cfg['embedding_mode']
     cfg['model']['loss_mode'] = cfg['loss_mode']
-    cfg['model']['mf'] = {'hidden_size': 64, 'enable_bias': True}
+    cfg['model']['mf'] = {'hidden_size': 64}
     cfg['model']['simplex'] = {'hidden_size': 64, 'aggregation_mode': 'mean', 'gamma': 1, 'attention_dropout': 0.,
                                'net_dropout': 0.1, 'enable_bias': True}
-    cfg['model']['gru4rec'] = {'hidden_size': 256}
+    cfg['model']['gru4rec'] = {'hidden_size': 256, 'num_layers': 2}
     cfg['model']['youtubednn'] = {'hidden_size': [256, 128, 64]}
     if 'make_stats' not in cfg:
         cfg['model']['stats'] = make_stats('{}'.format(cfg['data_name']))
