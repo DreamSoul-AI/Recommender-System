@@ -4,3 +4,5 @@ from .model import *
 from .rs import *
 from .gru4rec import *
 from .youtubednn import *
+from .dssm import *
+from .sasrec import *

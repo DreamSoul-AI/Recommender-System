@@ -3,47 +3,33 @@ import torch.nn as nn
 import torch.nn.functional as F
 from .model import init_param
 from .rs import normalize_embedding
-from .layers import MLP
+from .layers import MLP, AveragePooling
 
 
-# https://github.com/datawhalechina/torch-rechub/blob/main/torch_rechub/models/matching/gru4rec.py
+# https://github.com/datawhalechina/torch-rechub/blob/main/torch_rechub/models/matching/dssm.py
+# https://github.com/reczoo/RecBox/blob/main/recbox/third_party/rechub/models/matching/dssm_facebook.py
 
-class GRU4Rec(nn.Module):
-    def __init__(self, num_users, num_items, embedding_mode, hidden_size, num_layers=2):
+class DSSM(nn.Module):
+    def __init__(self, num_users, num_items, embedding_mode, hidden_size):
         super().__init__()
         self.num_users = num_users
         self.num_items = num_items
         self.embedding_mode = embedding_mode
         self.hidden_size = hidden_size
-        self.num_layers = num_layers
-        self.user_weight = nn.Embedding(self.num_users, hidden_size[-1])
-        self.item_weight = nn.Embedding(self.num_items + 1, hidden_size[-1])
-        self.user_mlp = MLP(hidden_size[-1], output_layer=False, dims=hidden_size)
-        # GRU layer for modeling user behavior sequences
-        self.gru = nn.GRU(
-            input_size=hidden_size[-1],
-            hidden_size=hidden_size[-1],
-            num_layers=num_layers,
-            batch_first=True,
-            bias=False
-        )
+        self.user_weight = nn.Embedding(self.num_users, self.hidden_size[-1])
+        self.item_weight = nn.Embedding(self.num_items + 1, self.hidden_size[-1])  # +1 for padding index
+        self.pooling_layer = AveragePooling()
+        self.user_mlp = MLP(hidden_size[-1] * 2, output_layer=False, dims=hidden_size)
+        self.item_mlp = MLP(hidden_size[-1], output_layer=False, dims=hidden_size)
 
     def make_padding(self, hist, padding_idx):
-        hist = torch.where(hist == -100, hist.new_ones((1,)) * padding_idx, hist)
-        return hist
+        return torch.where(hist == -100, hist.new_full((1,), padding_idx), hist)
 
     def user_embedding(self, user, item_hist):
+        mask = item_hist == -100
         item_hist = self.make_padding(item_hist, self.num_items)
-        lengths = (item_hist != self.num_items).sum(dim=1).tolist()
         item_hist_embedding = self.item_weight(item_hist)
-        item_hist_embedding = nn.utils.rnn.pack_padded_sequence(
-            item_hist_embedding, lengths, batch_first=True, enforce_sorted=False
-        )
-        _, item_hist_embedding = self.gru(item_hist_embedding)
-
-        # hidden shape: [num_layers, batch_size, hidden_size]
-        # Use the last layer's hidden state
-        item_hist_embedding = item_hist_embedding[-1]  # get last layer hidden, Shape: [batch_size, hidden_size]
+        item_hist_embedding = self.pooling_layer(item_hist_embedding, mask)
         user_embedding = self.user_weight(user)
         user_embedding = torch.cat([user_embedding, item_hist_embedding], dim=-1)
         user_embedding = self.user_mlp(user_embedding)
@@ -52,6 +38,10 @@ class GRU4Rec(nn.Module):
 
     def item_embedding(self, item):
         item_embedding = self.item_weight(item)
+        item_embedding_shape = item_embedding.size()
+        item_embedding = item_embedding.view(-1, item_embedding.size(-1))
+        item_embedding = self.item_mlp(item_embedding)
+        item_embedding = item_embedding.view(item_embedding_shape)
         item_embedding = normalize_embedding(item_embedding, self.embedding_mode, 'item')
         return item_embedding
 
@@ -64,10 +54,10 @@ class GRU4Rec(nn.Module):
         return output_rating, user_embedding, item_embedding
 
 
-def gru4rec(cfg):
+def dssm(cfg):
     num_users = cfg['stats']['num_users']
     num_items = cfg['stats']['num_items']
     embedding_mode = cfg['embedding_mode']
-    model = GRU4Rec(num_users, num_items, embedding_mode, **cfg['gru4rec'])
+    model = DSSM(num_users, num_items, embedding_mode, **cfg['dssm'])
     model.apply(init_param)
     return model

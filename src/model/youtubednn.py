@@ -15,8 +15,8 @@ class YoutubeDNN(nn.Module):
         self.num_items = num_items
         self.embedding_mode = embedding_mode
         self.hidden_size = hidden_size
-        self.user_weight = nn.Embedding(self.num_users, hidden_size[-1])
-        self.item_weight = nn.Embedding(self.num_items + 1, hidden_size[-1])
+        self.user_weight = nn.Embedding(self.num_users, self.hidden_size[-1])
+        self.item_weight = nn.Embedding(self.num_items + 1, self.hidden_size[-1])
         self.pooling_layer = AveragePooling()
         self.user_mlp = MLP(hidden_size[-1] * 2, output_layer=False, dims=hidden_size)
 

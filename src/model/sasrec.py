@@ -5,7 +5,7 @@ from .model import init_param
 from .rs import normalize_embedding
 from .layers import MLP, AveragePooling
 
-#https://github.com/reczoo/RecBox/blob/main/recbox/third_party/rechub/models/matching/sasrec.py
+# https://github.com/datawhalechina/torch-rechub/blob/main/torch_rechub/models/matching/sasrec.py
 
 class SASRec(nn.Module):
     """

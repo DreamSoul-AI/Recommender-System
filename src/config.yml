@@ -2,7 +2,7 @@
 # control
 control:
   data_name: AmazonBeauty
-  model_name: gru4rec
+  model_name: dssm
   embedding_mode: cosine
   loss_mode: contrastive
 # experiment
