@@ -7,22 +7,6 @@ https://github.com/datawhalechina/torch-rechub/blob/main/torch_rechub/models/mat
 
 
 class MLP(nn.Module):
-    """Multi Layer Perceptron Module, it is the most widely used module for
-    learning feature. Note we default add `BatchNorm1d` and `Activation`
-    `Dropout` for each `Linear` Module.
-
-    Args:
-        input dim (int): input size of the first Linear Layer.
-        output_layer (bool): whether this MLP module is the output layer. If `True`, then append one Linear(*,1) module.
-        dims (list): output size of Linear Layer (default=[]).
-        dropout (float): probability of an element to be zeroed (default = 0.5).
-        activation (str): the activation function, support `[sigmoid, relu, prelu, dice, softmax]` (default='relu').
-
-    Shape:
-        - Input: `(batch_size, input_dim)`
-        - Output: `(batch_size, 1)` or `(batch_size, dims[-1])`
-    """
-
     def __init__(self, input_dim, output_layer=True, dims=None, dropout=0):
         super().__init__()
         if dims is None:
@@ -43,15 +27,6 @@ class MLP(nn.Module):
 
 
 class AveragePooling(nn.Module):
-    """Pooling the sequence embedding matrix by `mean`.
-
-    Shape:
-        - Input
-            x: `(batch_size, seq_length, embed_dim)`
-            mask: `(batch_size, 1, seq_length)`
-        - Output: `(batch_size, embed_dim)`
-    """
-
     def __init__(self):
         super().__init__()
 
