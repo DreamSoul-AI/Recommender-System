@@ -63,19 +63,57 @@ def evaluate_metrics(user_embs,
 def evaluate_block(user_embs, faiss_index, query_indices, train_user2items,
                    valid_user2items, metric_funcs, max_topk):
     # set to topk=500 here since the retrieval results may contain clicked items
-    scores, indices = faiss_index.search(user_embs, topk=500)
-    # mask out items already clicked in train data
-    mask = np.zeros((user_embs.shape[0], faiss_index.index.ntotal))
-    for i, query_index in enumerate(query_indices):
-        train_items = train_user2items[query_index]
-        mask[i, train_items] = 1
-    mask = np.take_along_axis(mask, indices, axis=1)  # ie, mask[np.arange(len(mask))[:, None], indices]
-    scores += -1e9 * mask
-    sorted_idxs = np.argsort(-scores, axis=1)
-    topk_items = np.take_along_axis(indices, sorted_idxs, axis=1)[:, 0:max_topk]  # get max_topk for metrics
-    true_items = [valid_user2items[query_index] for query_index in query_indices]
-    chunk_results = [[func(preds, labels) for func in metric_funcs] \
-                     for preds, labels in zip(topk_items, true_items)]
+
+    if len(user_embs.shape) == 3:
+        #search in multi-interest group
+        bsz, num_interests, hidden_dim = user_embs.shape
+        user_embs_flat = user_embs.reshape(bsz * num_interests, hidden_dim)
+        scores, indices = faiss_index.search(user_embs_flat, topk = 500 * num_interests)
+        scores = scores.reshape(bsz, num_interests, 500 * num_interests)
+        indices = indices.reshape(bsz, num_interests, 500 * num_interests)
+        final_topk_items_all = []
+        
+        for i, query_index in enumerate(query_indices):
+            user_scores   = scores[i].reshape(-1)    # shape: [num_interests * retrieval_topk]
+            user_indices  = indices[i].reshape(-1)   # shape: [num_interests * retrieval_topk]
+            train_items_set = set(train_user2items[query_index])
+            
+            item2best_score = {}
+  
+            for item, sc in zip(user_indices, user_scores):
+                if item not in train_items_set:
+                    if item not in item2best_score:
+                        item2best_score[item] = sc
+                    else:
+                        if sc > item2best_score[item]:
+                            item2best_score[item] = sc
+                            
+            sorted_item_score_pairs = sorted(item2best_score.items(), key=lambda x: x[1],reverse=True)
+            top_items = [x[0] for x in sorted_item_score_pairs[:max_topk]]
+            final_topk_items_all.append(top_items)
+
+            
+        chunk_results = []
+        for i, query_index in enumerate(query_indices):
+            preds = final_topk_items_all[i]
+            labels = valid_user2items[query_index]
+            metrics_for_user = [func(preds, labels) for func in metric_funcs]
+            chunk_results.append(metrics_for_user)
+
+    else:
+        scores, indices = faiss_index.search(user_embs, topk=500)
+        # mask out items already clicked in train data
+        mask = np.zeros((user_embs.shape[0], faiss_index.index.ntotal))
+        for i, query_index in enumerate(query_indices):
+            train_items = train_user2items[query_index]
+            mask[i, train_items] = 1
+        mask = np.take_along_axis(mask, indices, axis=1)  # ie, mask[np.arange(len(mask))[:, None], indices]
+        scores += -1e9 * mask
+        sorted_idxs = np.argsort(-scores, axis=1)
+        topk_items = np.take_along_axis(indices, sorted_idxs, axis=1)[:, 0:max_topk]  # get max_topk for metrics
+        true_items = [valid_user2items[query_index] for query_index in query_indices]
+        chunk_results = [[func(preds, labels) for func in metric_funcs] \
+                         for preds, labels in zip(topk_items, true_items)]
     return chunk_results
 
 
