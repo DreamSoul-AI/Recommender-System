@@ -29,6 +29,7 @@ def process_control():
     cfg['model']['youtubednn'] = {'hidden_size': [256, 128, 64]}
     cfg['model']['dssm'] = {'hidden_size': [256, 128, 64]}
     cfg['model']['sasrec'] = {'hidden_size': 64, 'dropout_rate': 0., 'num_blocks': 2, 'num_heads': 1}
+    cfg['model']['mind'] = {'hidden_size': 16, 'interest_num': 4}
     if 'make_stats' not in cfg:
         cfg['model']['stats'] = make_stats('{}'.format(cfg['data_name']))
     cfg['model']['num_negatives'] = 800
