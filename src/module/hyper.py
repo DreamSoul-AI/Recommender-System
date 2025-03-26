@@ -12,8 +12,8 @@ def process_control():
     cfg['batch_size'] = batch_size[cfg['data_name']]
     cfg['step_period'] = 1
     cfg['num_steps'] = 1
-    cfg['eval_period'] = -1
-    cfg['num_epochs'] = 100
+    cfg['eval_period'] = 1
+    # cfg['num_epochs'] = None
     cfg['collate_mode'] = 'dict'
 
     cfg['max_length_mode'] = 'longest'

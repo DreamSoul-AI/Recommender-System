@@ -29,12 +29,6 @@ def make_dataset(data_name, transform=True, verbose=True):
                                                            cfg['model']['max_length'])])
             dataset_['train'].transform = {'user': user_item_transform, 'item': user_item_transform,
                                            'rating': rating_transform}
-            # dataset_['test'].transform = dataset.Compose([Padding(cfg['model']['pad_token'],
-            #                                                       cfg['model']['max_length'])])
-            # dataset_['train'].transform = dataset.Compose([NegativeSampling(cfg['model']['stats']['num_items'],
-            #                                                                 cfg['model']['num_negatives']),
-            #                                                Padding(cfg['model']['pad_token'],
-            #                                                        cfg['model']['max_length'])])
     else:
         raise ValueError('Not valid dataset name')
     if verbose:
