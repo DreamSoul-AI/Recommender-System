@@ -35,7 +35,6 @@ def evaluate_metrics(user_embs,
             max_topk = max(max_topk, int(metric.split("k=")[-1].strip(")")))
         except:
             raise NotImplementedError('metrics={} not implemented.'.format(metric))
-
     faiss_index = FaissIndex(item_embs, dim=item_embs.shape[-1])
     chunk_size = min(1000, int(np.ceil(len(user_embs) / float(num_workers))))
     pool = mp.Pool(processes=num_workers)

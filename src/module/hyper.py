@@ -13,7 +13,7 @@ def process_control():
     cfg['step_period'] = 1
     cfg['num_steps'] = 1
     cfg['eval_period'] = 1
-    # cfg['num_epochs'] = None
+    # cfg['num_epochs'] = 1
     cfg['collate_mode'] = 'dict'
 
     cfg['max_length_mode'] = 'longest'
@@ -28,6 +28,7 @@ def process_control():
     cfg['model']['gru4rec'] = {'hidden_size': [256, 128, 64]}
     cfg['model']['youtubednn'] = {'hidden_size': [256, 128, 64]}
     cfg['model']['dssm'] = {'hidden_size': [256, 128, 64]}
+    cfg['model']['dssm_senet'] = {'hidden_size': [256, 128, 64]}
     cfg['model']['sasrec'] = {'hidden_size': 64, 'dropout_rate': 0., 'num_blocks': 2, 'num_heads': 1}
     cfg['model']['mind'] = {'hidden_size': 16, 'interest_num': 4}
     if 'make_stats' not in cfg:

@@ -39,18 +39,19 @@ class AveragePooling(nn.Module):
             non_padding_length = mask.sum(dim=-1)
             x = sum_pooling_matrix / (non_padding_length.float() + 1e-16)
         return x
-        
-#-----update
+
+
 class SENETLayer(nn.Module):
-    def __init__(self, num_fields, reduction_ratio=3):
+    def __init__(self, num_fields, reduction_ratio=4):
         super(SENETLayer, self).__init__()
-        reduced_size = max(1, int(num_fields/ reduction_ratio))
+        reduced_size = max(1, int(num_fields / reduction_ratio))
         self.mlp = nn.Sequential(nn.Linear(num_fields, reduced_size, bias=False),
                                  nn.ReLU(),
                                  nn.Linear(reduced_size, num_fields, bias=False),
                                  nn.ReLU())
+
     def forward(self, x):
-        z = torch.mean(x, dim=-1, out=None)
+        z = torch.mean(x, dim=1, out=None)
         a = self.mlp(z)
-        v = x*a.unsqueeze(-1)
+        v = x * a.unsqueeze(1)
         return v

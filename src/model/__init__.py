@@ -5,5 +5,6 @@ from .rs import *
 from .gru4rec import *
 from .youtubednn import *
 from .dssm import *
+from .dssm_senet import *
 from .sasrec import *
 from .mind import *
