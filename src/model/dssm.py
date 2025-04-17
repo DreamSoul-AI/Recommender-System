@@ -7,7 +7,7 @@ from .layers import MLP, AveragePooling
 
 
 # https://github.com/datawhalechina/torch-rechub/blob/main/torch_rechub/models/matching/dssm.py
-# https://github.com/reczoo/RecBox/blob/main/recbox/third_party/rechub/models/matching/dssm_facebook.py
+# https://github.com/datawhalechina/torch-rechub/blob/main/torch_rechub/models/matching/dssm_senet.py
 
 class DSSM(nn.Module):
     def __init__(self, num_users, num_items, embedding_mode, hidden_size):
