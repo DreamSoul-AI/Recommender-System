@@ -8,3 +8,4 @@ from .dssm import *
 from .dssm_senet import *
 from .sasrec import *
 from .mind import *
+from .sine import *
