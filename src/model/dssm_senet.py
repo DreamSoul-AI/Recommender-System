@@ -29,9 +29,6 @@ class DSSM_SENET(nn.Module):
         self.user_mlp = MLP(self.embedding_dim * 2, output_layer=False, dims=hidden_size)
         self.item_mlp = MLP(self.embedding_dim, output_layer=False, dims=hidden_size)
 
-        # self.user_senet = SENETLayer(num_fields=2)
-        # self.hist_senet = SENETLayer(num_fields=None)
-
     def make_padding(self, hist, padding_idx):
         return torch.where(hist == -100, hist.new_full((1,), padding_idx), hist)
 
@@ -57,18 +54,6 @@ class DSSM_SENET(nn.Module):
         item_embedding = self.item_mlp(item_embedding)
         item_embedding = item_embedding.view(item_embedding_shape)
         item_embedding = normalize_embedding(item_embedding, self.embedding_mode, 'item')
-
-        # item_embedding = self.item_weight(item)
-        # item_embedding_shape = item_embedding.size()
-        # item_embedding = self.item_senet(item_embedding.unsqueeze(1)).squeeze(1)
-        # print(item_embedding.size(), item_embedding_shape)
-        # exit()
-        #
-        # item_embedding = item_embedding.view(-1, item_embedding.size(-1))
-        # item_embedding = self.item_mlp(item_embedding)
-        # item_embedding = item_embedding.view(item_embedding_shape[0], -1, self.embedding_dim) \
-        #     if len(item_embedding_shape) > 1 else item_embedding
-        # item_embedding = normalize_embedding(item_embedding, self.embedding_mode, 'item')
         return item_embedding
 
     def forward(self, user, item, item_hist):
