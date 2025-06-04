@@ -10,3 +10,5 @@ from .sasrec import *
 from .mind import *
 from .comirec import *
 from .sine import *
+from .stamp import *
+from .narm import *
