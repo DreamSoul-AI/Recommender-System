@@ -8,24 +8,24 @@ from .model import init_param
 
 
 class NARM(nn.Module):
-    def __init__(self, num_users, num_items, embedding_mode, hidden_dim=100, emb_dim=100, emb_dropout_p=0.0,
-                 session_rep_dropout_p=0.0):
+    def __init__(self, num_users, num_items, embedding_mode, hidden_size, emb_dropout_p=0.25,
+                 session_rep_dropout_p=0.5):
         super().__init__()
         self.num_users = num_users
         self.num_items = num_items
         self.embedding_mode = embedding_mode
-        self.hidden_dim = hidden_dim
-        self.emb_dim = emb_dim
+        self.hidden_size = hidden_size
+        self.embedding_dim = hidden_size
 
-        self.item_emb = Embedding(num_items + 1, emb_dim, padding_idx=num_items)
+        self.item_emb = Embedding(num_items + 1, hidden_size, padding_idx=num_items)
         self.emb_dropout = Dropout(emb_dropout_p)
 
-        self.gru = GRU(input_size=emb_dim, hidden_size=hidden_dim, batch_first=True)
+        self.gru = GRU(input_size=hidden_size, hidden_size=hidden_size, batch_first=True)
 
-        self.a_1 = Parameter(torch.randn(hidden_dim, hidden_dim))
-        self.a_2 = Parameter(torch.randn(hidden_dim, hidden_dim))
-        self.v = Parameter(torch.randn(hidden_dim, 1))
-        self.b = Parameter(torch.randn(emb_dim, hidden_dim * 2))
+        self.a_1 = Parameter(torch.randn(hidden_size, hidden_size))
+        self.a_2 = Parameter(torch.randn(hidden_size, hidden_size))
+        self.v = Parameter(torch.randn(hidden_size, 1))
+        self.b = Parameter(torch.randn(hidden_size, hidden_size * 2))
 
         self.session_rep_dropout = Dropout(session_rep_dropout_p)
 
@@ -43,12 +43,14 @@ class NARM(nn.Module):
 
         h_seq, h_last = self.gru(packed_embs)
         h_last = h_last.permute(1, 0, 2)  # (B, 1, H)
-        h_seq, _ = rnn_utils.pad_packed_sequence(h_seq, batch_first=True)  # (B, L, H)
+        h_seq, _ = rnn_utils.pad_packed_sequence(h_seq, batch_first=True)  # (B, L1, H)
+
+        value_mask = value_mask[:, :h_seq.size(1)]  # Align mask shape with h_seq
 
         c_g = h_last.squeeze(1)  # (B, H)
 
-        q = sigmoid(h_last @ self.a_1.T + h_seq @ self.a_2.T) @ self.v  # (B, L, 1)
-        alpha = torch.exp(q) * value_mask.unsqueeze(-1)  # (B, L, 1)
+        q = sigmoid(h_last @ self.a_1.T + h_seq @ self.a_2.T) @ self.v  # (B, L1, 1)
+        alpha = torch.exp(q) * value_mask.unsqueeze(-1)  # (B, L1, 1)
         alpha = alpha / (alpha.sum(dim=1, keepdim=True) + 1e-9)
 
         c_l = (alpha * h_seq).sum(1)  # (B, H)

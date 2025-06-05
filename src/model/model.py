@@ -24,10 +24,10 @@ def init_param(m):
         if m.bias is not None:
             m.bias.data.zero_()
     elif isinstance(m, nn.Linear):
-        nn.init.xavier_normal_(m.weight)  # add from Reczoo
+        nn.init.xavier_normal_(m.weight)
         if m.bias is not None:
             m.bias.data.zero_()
-    elif isinstance(m, nn.Embedding):  # add from Reczoo
+    elif isinstance(m, nn.Embedding):
         if m.padding_idx is not None:
             nn.init.normal_(m.weight[:-1, :], std=1e-4)
         else:

@@ -11,8 +11,8 @@ def process_control():
     batch_size = {'AmazonBeauty': 256}
     cfg['batch_size'] = batch_size[cfg['data_name']]
     cfg['step_period'] = 1
-    cfg['num_steps'] = 1
-    cfg['eval_period'] = 1
+    cfg['num_steps'] = 30
+    cfg['eval_period'] = 30
     # cfg['num_epochs'] = 1
     cfg['collate_mode'] = 'dict'
 
@@ -33,6 +33,8 @@ def process_control():
     cfg['model']['mind'] = {'hidden_size': 16, 'interest_num': 4}
     cfg['model']['comirec'] = {'hidden_size': 16, 'interest_num': 4}
     cfg['model']['sine'] = {'hidden_size': 16, 'num_concepts': 20, 'num_intention': 2, 'hidden_att_dim': 512}
+    cfg['model']['stamp'] = {'hidden_size': 64}
+    cfg['model']['narm'] = {'hidden_size': 64}
     if 'make_stats' not in cfg:
         cfg['model']['stats'] = make_stats('{}'.format(cfg['data_name']))
     cfg['model']['num_negatives'] = 800
