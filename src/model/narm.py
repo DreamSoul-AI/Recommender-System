@@ -7,6 +7,8 @@ from .rs import normalize_embedding
 from .model import init_param
 
 
+# https://github.com/datawhalechina/torch-rechub/blob/main/torch_rechub/models/matching/narm.py
+
 class NARM(nn.Module):
     def __init__(self, num_users, num_items, embedding_mode, hidden_size, emb_dropout_p=0.25,
                  session_rep_dropout_p=0.5):
