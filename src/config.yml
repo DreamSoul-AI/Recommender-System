@@ -2,7 +2,7 @@
 # control
 control:
   data_name: AmazonBeauty
-  model_name: stamp
+  model_name: neumf
   embedding_mode: cosine
   loss_mode: contrastive
 # experiment
