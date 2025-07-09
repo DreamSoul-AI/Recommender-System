@@ -142,3 +142,39 @@ class NegativeSampling(torch.nn.Module):
         input['item'] = torch.cat([input['item'].view(-1), negatives])
         input['target'] = torch.cat([input['target'].view(-1), input['target'].new_zeros(len(negatives))])
         return input
+
+
+class NegativeSampling_2(torch.nn.Module):
+    def __init__(self, num_users, num_items, num_negatives):
+        super().__init__()
+        self.num_users = num_users
+        self.num_items = num_items
+        self.num_negatives = num_negatives
+
+    def forward(self, input):
+        positive_users = set(torch.cat([input['user'].view(-1), input['user_hist']]).tolist())
+        positive_items = set(torch.cat([input['item'].view(-1), input['item_hist']]).tolist())
+        negative_users = set()
+        negative_items = set()
+
+        while len(negative_users) < self.num_negatives:
+            new_negatives = torch.randint(low=0, high=self.num_users, size=(self.num_negatives,))
+            negative_users.update(set(new_negatives.tolist()) - positive_users)
+        while len(negative_items) < self.num_negatives:
+            new_negatives = torch.randint(low=0, high=self.num_items, size=(self.num_negatives,))
+            negative_items.update(set(new_negatives.tolist()) - positive_items)
+        negative_users = torch.tensor(list(negative_users))
+        negative_items = torch.tensor(list(negative_items))
+
+        if len(negative_users) > self.num_negatives:
+            negative_users = negative_users[:self.num_negatives]
+        if len(negative_items) > self.num_negatives:
+            negative_items = negative_items[:self.num_negatives]
+
+        negative_users = negative_users[:self.num_negatives]
+        negative_items = negative_items[:self.num_negatives]
+        # TODO: consider isolate negatives in a different field
+        input['user'] = torch.cat([input['user'].view(-1), negative_users])
+        input['item'] = torch.cat([input['item'].view(-1), negative_items])
+        input['target'] = torch.cat([input['target'].view(-1), input['target'].new_zeros(len(negative_items))])
+        return input
