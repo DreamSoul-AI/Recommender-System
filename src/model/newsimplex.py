@@ -54,12 +54,8 @@ class NewSimpleX(nn.Module):
         user_hist = self.make_padding(user_hist, self.num_users)
         user_seq_emb = self.user_weight(user_hist)
         # pick the first positive item
-        pos_item_emb = item_embedding[:,0:1,:].squeeze(1)
-        # aggregate over interacted users for the first positive item
-        agg_pos_item_emb = self.behavior_aggregation(pos_item_emb, user_seq_emb)
-        item_emb = item_embedding.clone()
-        item_emb[:,0:1,:] = agg_pos_item_emb.unsqueeze(1)
-        item_emb = normalize_embedding(item_embedding, self.embedding_mode, 'item')
+        item_emb = self.behavior_aggregation(item_embedding, user_seq_emb)
+        item_emb = normalize_embedding(item_emb, self.embedding_mode, 'item')
         if self.enable_bias:
             item_emb = torch.cat([item_emb, self.item_bias(item)], dim=-1)
         return item_emb
@@ -101,14 +97,27 @@ class BehaviorAggregator(nn.Module):
         return self.gamma * uid_emb + (1 - self.gamma) * out
 
     def user_attention(self, uid_emb, sequence_emb):
+        single_query = (uid_emb.dim() == 2)
+        if single_query:
+            uid_q = uid_emb.unsqueeze(1).  #[B,1,D]
+        else:
+            uid_q = uid_emb
         key = self.W_k(sequence_emb)  # b x seq_len x attention_dim
-        mask = sequence_emb.sum(dim=-1) == 0
-        attention = torch.bmm(key, uid_emb.unsqueeze(-1)).squeeze(-1)  # b x seq_len
-        attention = self.masked_softmax(attention, mask)
+        mask = (sequence_emb.sum(dim=-1) == 0)
+
+        logits = torch.matmul(uid_q, key.transpose(1,2))
+        logits = logits / (uid_q.size(-1) **0.5) 
+        logits = logits.masked_fill(mask.unsqueeze(1), -1e9)
+        attention = F.softmax(logits, dim = -1)
         if self.dropout is not None:
             attention = self.dropout(attention)
-        output = torch.bmm(attention.unsqueeze(1), sequence_emb).squeeze(1)
-        return self.W_v(output)
+        #output = torch.bmm(attention.unsqueeze(1), sequence_emb).squeeze(1)
+        output = torch.matmul(attention, sequence_emb)
+        output = self.W_v(output)
+
+        if single_query:
+            output = output.squeeze(1)
+        return output
 
     def self_attention(self, sequence_emb):
         key = self.W_k(sequence_emb)  # b x seq_len x attention_dim
@@ -136,6 +145,6 @@ def newsimplex(cfg):
     num_users = cfg['stats']['num_users']
     num_items = cfg['stats']['num_items']
     embedding_mode = cfg['embedding_mode']
-    model = NewSimpleX(num_users, num_items, embedding_mode, **cfg['simplex'])
+    model = NewSimpleX(num_users, num_items, embedding_mode, **cfg['new_simplex'])
     model.apply(init_param)
     return model

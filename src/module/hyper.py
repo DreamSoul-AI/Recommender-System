@@ -25,6 +25,8 @@ def process_control():
     cfg['model']['mf'] = {'hidden_size': 64}
     cfg['model']['simplex'] = {'hidden_size': 64, 'aggregation_mode': 'mean', 'gamma': 1, 'attention_dropout': 0.,
                                'net_dropout': 0.1, 'enable_bias': True}
+    cfg['model']['new_simplex'] = {'hidden_size': 64, 'aggregation_mode': 'user_attention', 'gamma': 1, 'attention_dropout': 0.,
+                               'net_dropout': 0.1, 'enable_bias': True}
     cfg['model']['gru4rec'] = {'hidden_size': [256, 128, 64]}
     cfg['model']['youtubednn'] = {'hidden_size': [256, 128, 64]}
     cfg['model']['dssm'] = {'hidden_size': [256, 128, 64]}
