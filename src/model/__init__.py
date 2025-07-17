@@ -12,3 +12,4 @@ from .comirec import *
 from .sine import *
 from .stamp import *
 from .narm import *
+from .newsimplex import *
